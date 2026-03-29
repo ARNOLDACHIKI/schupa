@@ -29,10 +29,6 @@ export default defineConfig(() => ({
             return "radix-vendor";
           }
 
-          if (id.includes("recharts") || id.includes("d3-")) {
-            return "charts-vendor";
-          }
-
           if (id.includes("@tanstack/react-query")) {
             return "query-vendor";
           }
