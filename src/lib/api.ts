@@ -12,6 +12,32 @@ interface RequestOptions {
   token?: string | null;
 }
 
+const getProtectedPreviewMessage = (response: Response, rawBody: string) => {
+  const isVercelProtectionRedirect = response.redirected && response.url.includes("vercel.com/sso-api");
+  const isVercelProtectionHtml =
+    rawBody.includes("vercel.com/sso-api") ||
+    rawBody.includes("Authentication Required") ||
+    rawBody.includes("Vercel Authentication");
+
+  if (isVercelProtectionRedirect || isVercelProtectionHtml) {
+    return "This preview deployment is access-protected on Vercel. Sign in to Vercel or use the public production URL.";
+  }
+
+  return null;
+};
+
+const parseJsonSafely = (rawBody: string) => {
+  if (!rawBody) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(rawBody);
+  } catch (_error) {
+    return null;
+  }
+};
+
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const token = options.token ?? getStoredToken();
 
@@ -24,15 +50,17 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     body: options.body ? JSON.stringify(options.body) : undefined,
   });
 
-  let payload: any = null;
-  try {
-    payload = await response.json();
-  } catch (_error) {
-    payload = null;
-  }
+  const rawBody = await response.text();
+  const payload = parseJsonSafely(rawBody);
+  const protectedPreviewMessage = getProtectedPreviewMessage(response, rawBody);
 
   if (!response.ok) {
-    const message = payload?.message || "Request failed.";
+    const message = protectedPreviewMessage || payload?.message || "Request failed.";
+    throw new Error(message);
+  }
+
+  if (!payload) {
+    const message = protectedPreviewMessage || "Unexpected response format from server.";
     throw new Error(message);
   }
 
@@ -50,15 +78,17 @@ export async function apiUploadRequest<T>(path: string, formData: FormData, toke
     body: formData,
   });
 
-  let payload: any = null;
-  try {
-    payload = await response.json();
-  } catch (_error) {
-    payload = null;
-  }
+  const rawBody = await response.text();
+  const payload = parseJsonSafely(rawBody);
+  const protectedPreviewMessage = getProtectedPreviewMessage(response, rawBody);
 
   if (!response.ok) {
-    const message = payload?.message || "Upload failed.";
+    const message = protectedPreviewMessage || payload?.message || "Upload failed.";
+    throw new Error(message);
+  }
+
+  if (!payload) {
+    const message = protectedPreviewMessage || "Unexpected response format from server.";
     throw new Error(message);
   }
 

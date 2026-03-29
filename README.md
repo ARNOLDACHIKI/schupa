@@ -70,6 +70,11 @@ Configuration is in `vercel.json`.
 - `EMAIL_PASSWORD`
 - `EMAIL_FROM`
 
+Important for preview deployments:
+
+- Add these variables to both Production and Preview environments in Vercel.
+- If a preview URL should be shared for testing, disable Vercel Deployment Protection for that preview (or use a protection bypass) so `/api/*` routes are reachable.
+
 For Neon, use the SSL connection string format in `DATABASE_URL`, for example:
 
 `postgresql://USER:PASSWORD@HOST/DB?sslmode=require`
