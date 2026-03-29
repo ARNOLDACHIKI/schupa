@@ -25,6 +25,17 @@ const SignUp = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (name.trim().length < 2) {
+      toast({ title: "Error", description: "Full name must be at least 2 characters.", variant: "destructive" });
+      return;
+    }
+
+    if (password.length < 6) {
+      toast({ title: "Error", description: "Password must be at least 6 characters.", variant: "destructive" });
+      return;
+    }
+
     if (password !== confirmPw) {
       toast({ title: "Error", description: "Passwords do not match.", variant: "destructive" });
       return;
@@ -152,7 +163,7 @@ const SignUp = () => {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="text-sm font-medium text-foreground mb-1 block">Full Name</label>
-                <Input placeholder="John Doe" value={name} onChange={(e) => setName(e.target.value)} required />
+                <Input placeholder="John Doe" value={name} onChange={(e) => setName(e.target.value)} minLength={2} required />
               </div>
               <div>
                 <label className="text-sm font-medium text-foreground mb-1 block">Email</label>
@@ -161,7 +172,7 @@ const SignUp = () => {
               <div>
                 <label className="text-sm font-medium text-foreground mb-1 block">Password</label>
                 <div className="relative">
-                  <Input type={showPw ? "text" : "password"} placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                  <Input type={showPw ? "text" : "password"} placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} minLength={6} required />
                   <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" onClick={() => setShowPw(!showPw)}>
                     {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -169,8 +180,9 @@ const SignUp = () => {
               </div>
               <div>
                 <label className="text-sm font-medium text-foreground mb-1 block">Confirm Password</label>
-                <Input type="password" placeholder="••••••••" value={confirmPw} onChange={(e) => setConfirmPw(e.target.value)} required />
+                <Input type="password" placeholder="••••••••" value={confirmPw} onChange={(e) => setConfirmPw(e.target.value)} minLength={6} required />
               </div>
+              <p className="text-xs text-muted-foreground">Password must be at least 6 characters.</p>
               <div className="flex items-center gap-2">
                 <Checkbox id="terms" checked={agreed} onCheckedChange={(v) => setAgreed(!!v)} />
                 <label htmlFor="terms" className="text-sm text-muted-foreground">

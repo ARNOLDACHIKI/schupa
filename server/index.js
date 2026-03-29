@@ -361,9 +361,9 @@ app.post(
   asyncHandler(async (req, res) => {
     const body = z
       .object({
-        name: z.string().min(2),
-        email: z.string().email(),
-        password: z.string().min(6),
+        name: z.string().min(2, "Full name must be at least 2 characters."),
+        email: z.string().email("Enter a valid email address."),
+        password: z.string().min(6, "Password must be at least 6 characters."),
       })
       .parse(req.body);
 
@@ -1552,7 +1552,11 @@ app.post(
 
 app.use((err, _req, res, _next) => {
   if (err instanceof z.ZodError) {
-    return res.status(400).json({ message: "Invalid request payload.", issues: err.issues });
+    const firstIssue = err.issues[0]?.message;
+    return res.status(400).json({
+      message: firstIssue ? `Invalid request payload: ${firstIssue}` : "Invalid request payload.",
+      issues: err.issues,
+    });
   }
 
   console.error(err);
