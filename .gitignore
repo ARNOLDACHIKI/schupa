@@ -13,6 +13,9 @@ dist-ssr
 *.local
 .env
 uploads/
+artifacts/
+test-results/
+ma generate
 
 # Editor directories and files
 .vscode/*
