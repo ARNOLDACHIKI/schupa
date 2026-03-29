@@ -2,7 +2,22 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
 const globalForPrisma = globalThis;
-const connectionString = process.env.DATABASE_URL?.trim();
+
+const normalizeDatabaseUrl = (rawValue) => {
+  if (!rawValue) {
+    return "";
+  }
+
+  const trimmed = rawValue.trim();
+  const postgresqlMatch = trimmed.match(/postgres(?:ql)?:\/\/[^\s'\"]+/i);
+  if (postgresqlMatch) {
+    return postgresqlMatch[0];
+  }
+
+  return trimmed.replace(/^['\"]|['\"]$/g, "");
+};
+
+const connectionString = normalizeDatabaseUrl(process.env.DATABASE_URL);
 
 let prismaInitError = null;
 let prismaClient = globalForPrisma.prisma || null;
