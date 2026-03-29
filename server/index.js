@@ -11,7 +11,7 @@ import multer from "multer";
 import rateLimit from "express-rate-limit";
 import { z } from "zod";
 import { DocumentType, FeeType, NotificationType, UserRole } from "@prisma/client";
-import { prisma } from "./lib/prisma.js";
+import { prisma, getPrismaInitError } from "./lib/prisma.js";
 import {
   sendWelcomeEmail,
   sendSignupVerificationCodeEmail,
@@ -302,7 +302,27 @@ const logAudit = async ({ actorId, action, entity, entityId, metadata }) => {
 };
 
 app.get("/api/health", (_req, res) => {
+  const prismaInitError = getPrismaInitError();
+  if (prismaInitError) {
+    return res.status(503).json({ ok: false, message: prismaInitError.message });
+  }
+
   res.json({ ok: true });
+});
+
+app.use("/api", (req, res, next) => {
+  if (req.path === "/health") {
+    return next();
+  }
+
+  const prismaInitError = getPrismaInitError();
+  if (prismaInitError) {
+    return res.status(500).json({
+      message: "Backend configuration error: DATABASE_URL is missing or invalid.",
+    });
+  }
+
+  return next();
 });
 
 app.post(
