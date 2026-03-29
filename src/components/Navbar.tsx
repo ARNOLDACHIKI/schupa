@@ -1,13 +1,20 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Menu, X, LogOut, LayoutDashboard } from "lucide-react";
+import { Menu, X, LogOut, LayoutDashboard, Settings, Bell, FileText, MessageSquare } from "lucide-react";
+import schupaLogo from "@/assets/schupa-logo.png";
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const isOnDashboard =
+    location.pathname === "/dashboard" ||
+    location.pathname === "/admin" ||
+    location.pathname.startsWith("/admin/");
 
   const handleLogout = () => {
     logout();
@@ -18,6 +25,8 @@ const Navbar = () => {
     { label: "Home", href: "/#home" },
     { label: "About", href: "/#about" },
     { label: "Programs", href: "/#programs" },
+    { label: "Schools", href: "/#schools" },
+    { label: "Donations", href: "/#donations" },
     { label: "Contact", href: "/#contact" },
   ];
 
@@ -25,9 +34,7 @@ const Navbar = () => {
     <nav className="fixed top-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-md border-b border-border">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
-            <span className="text-primary-foreground font-display font-bold text-sm">S</span>
-          </div>
+          <img src={schupaLogo} alt="SCHUPA logo" className="w-9 h-9 rounded-md object-cover" />
           <span className="font-display text-xl font-bold text-foreground">SCHUPA</span>
         </Link>
 
@@ -43,8 +50,26 @@ const Navbar = () => {
         <div className="hidden md:flex items-center gap-3">
           {user ? (
             <>
-              <Button variant="ghost" size="sm" onClick={() => navigate(user.role === "admin" ? "/admin" : "/dashboard")}>
-                <LayoutDashboard className="w-4 h-4 mr-1" /> Dashboard
+              {!isOnDashboard && (
+                <Button variant="ghost" size="sm" onClick={() => navigate(user.role === "admin" ? "/admin" : "/dashboard")}>
+                  <LayoutDashboard className="w-4 h-4 mr-1" /> Dashboard
+                </Button>
+              )}
+              <Button variant="ghost" size="sm" onClick={() => navigate("/messages")}>
+                <MessageSquare className="w-4 h-4 mr-1" /> Messages
+              </Button>
+              {user.role === "student" && (
+                <>
+                  <Button variant="ghost" size="sm" onClick={() => navigate("/notifications")}>
+                    <Bell className="w-4 h-4 mr-1" /> Notifications
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => navigate("/settings")}>
+                    <Settings className="w-4 h-4 mr-1" /> Settings
+                  </Button>
+                </>
+              )}
+              <Button variant="ghost" size="sm" onClick={() => navigate("/privacy-policy")}>
+                <FileText className="w-4 h-4 mr-1" /> Privacy
               </Button>
               <Button variant="outline" size="sm" onClick={handleLogout}>
                 <LogOut className="w-4 h-4 mr-1" /> Logout
@@ -77,8 +102,26 @@ const Navbar = () => {
           <div className="flex gap-2 mt-3">
             {user ? (
               <>
-                <Button variant="ghost" size="sm" className="flex-1" onClick={() => { navigate(user.role === "admin" ? "/admin" : "/dashboard"); setOpen(false); }}>
-                  Dashboard
+                {!isOnDashboard && (
+                  <Button variant="ghost" size="sm" className="flex-1" onClick={() => { navigate(user.role === "admin" ? "/admin" : "/dashboard"); setOpen(false); }}>
+                    Dashboard
+                  </Button>
+                )}
+                <Button variant="ghost" size="sm" className="flex-1" onClick={() => { navigate("/messages"); setOpen(false); }}>
+                  <MessageSquare className="w-4 h-4 mr-1" /> Messages
+                </Button>
+                {user.role === "student" && (
+                  <>
+                    <Button variant="ghost" size="sm" className="flex-1" onClick={() => { navigate("/notifications"); setOpen(false); }}>
+                      <Bell className="w-4 h-4 mr-1" /> Notifications
+                    </Button>
+                    <Button variant="ghost" size="sm" className="flex-1" onClick={() => { navigate("/settings"); setOpen(false); }}>
+                      <Settings className="w-4 h-4 mr-1" /> Settings
+                    </Button>
+                  </>
+                )}
+                <Button variant="ghost" size="sm" className="flex-1 mt-2" onClick={() => { navigate("/privacy-policy"); setOpen(false); }}>
+                  <FileText className="w-4 h-4 mr-1" /> Privacy
                 </Button>
                 <Button variant="outline" size="sm" className="flex-1" onClick={() => { handleLogout(); setOpen(false); }}>
                   Logout

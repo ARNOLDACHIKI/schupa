@@ -1,10 +1,12 @@
 export interface Result {
+  id?: string;
   semester: string;
   gpa: number;
   year: number;
 }
 
 export interface FeeRecord {
+  id?: string;
   date: string;
   description: string;
   amount: number;
@@ -17,11 +19,24 @@ export interface Remark {
   by: string;
 }
 
+export interface StudentDocument {
+  id: string;
+  type: "result" | "fee_statement" | "school_id";
+  name: string;
+  mimeType?: string;
+  sizeBytes?: number;
+  uploadedAt: string;
+  url: string;
+}
+
 export interface Student {
   id: string;
+  userId?: string;
   name: string;
   email: string;
+  approved?: boolean;
   photo: string;
+  bio?: string;
   course: string;
   institution: string;
   yearJoined: number;
@@ -31,13 +46,14 @@ export interface Student {
   feeRecords: FeeRecord[];
   feeBalance: number;
   remarks: Remark[];
+  documents?: StudentDocument[];
 }
 
 export const mockStudents: Student[] = [
   {
     id: "student-1",
     name: "Amina Wanjiku",
-    email: "student@schupa.org",
+    email: "amina@example.com",
     photo: "",
     course: "Computer Science",
     institution: "University of Nairobi",

@@ -1,0 +1,213 @@
+generator client {
+  provider = "prisma-client-js"
+  engineType = "binary"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  ADMIN
+  STUDENT
+}
+
+enum FeeType {
+  PAYMENT
+  CHARGE
+}
+
+enum DocumentType {
+  RESULT
+  FEE_STATEMENT
+  SCHOOL_ID
+}
+
+enum NotificationType {
+  SYSTEM
+  APPROVAL
+  REMARK
+  FEE
+  RESULT
+  MESSAGE
+}
+
+model User {
+  id           String         @id @default(cuid())
+  email        String         @unique
+  passwordHash String
+  name         String
+  role         UserRole
+  approved     Boolean        @default(false)
+  emailVerified Boolean       @default(false)
+  emailVerificationCode String?
+  emailVerificationExpiresAt DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  profile      StudentProfile?
+  remarks      Remark[]       @relation("RemarkAuthor")
+  notifications Notification[]
+  messagesSent Message[]      @relation("MessageSender")
+  messagesReceived Message[]  @relation("MessageReceiver")
+  uploadedDocuments UploadedDocument[]
+  repliedContactMessages ContactMessage[] @relation("ContactReplyAuthor")
+  preference   UserPreference?
+  auditLogs    AuditLog[]
+
+  @@index([role, approved])
+}
+
+model StudentProfile {
+  id          String      @id @default(cuid())
+  userId      String      @unique
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  photo       String?
+  bio         String?
+  course      String      @default("Not set")
+  institution String      @default("Not set")
+  yearJoined  Int         @default(2026)
+  currentYear Int         @default(1)
+  totalYears  Int         @default(4)
+  results     Result[]
+  feeRecords  FeeRecord[]
+  remarks     Remark[]
+  documents   UploadedDocument[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model Result {
+  id        String         @id @default(cuid())
+  semester  String
+  gpa       Float
+  year      Int
+  studentId String
+  student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  createdAt DateTime       @default(now())
+
+  @@index([studentId, year])
+}
+
+model FeeRecord {
+  id          String         @id @default(cuid())
+  date        DateTime
+  description String
+  amount      Float
+  type        FeeType
+  studentId   String
+  student     StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  createdAt   DateTime       @default(now())
+
+  @@index([studentId, date])
+}
+
+model Remark {
+  id        String         @id @default(cuid())
+  date      DateTime       @default(now())
+  text      String
+  byId      String
+  by        User           @relation("RemarkAuthor", fields: [byId], references: [id], onDelete: Cascade)
+  studentId String
+  student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, date])
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  message   String
+  repliedAt DateTime?
+  replyMessage String?
+  repliedById String?
+  repliedBy   User?    @relation("ContactReplyAuthor", fields: [repliedById], references: [id], onDelete: SetNull)
+  acknowledgedAt DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([email])
+}
+
+model PasswordResetRequest {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([email, createdAt])
+}
+
+model UploadedDocument {
+  id           String         @id @default(cuid())
+  studentId     String
+  student       StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  type          DocumentType
+  originalName  String
+  storagePath   String
+  mimeType      String
+  sizeBytes     Int
+  uploadedById  String
+  uploadedBy    User           @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+  createdAt     DateTime       @default(now())
+
+  @@index([studentId, type, createdAt])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType @default(SYSTEM)
+  title     String
+  message   String
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  @@index([userId, read, createdAt])
+}
+
+model Message {
+  id          String   @id @default(cuid())
+  fromUserId  String
+  toUserId    String
+  subject     String
+  body        String
+  read        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  fromUser User @relation("MessageSender", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUser   User @relation("MessageReceiver", fields: [toUserId], references: [id], onDelete: Cascade)
+
+  @@index([toUserId, read, createdAt])
+  @@index([fromUserId, createdAt])
+}
+
+model UserPreference {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emailNotifications Boolean  @default(true)
+  weeklyReport       Boolean  @default(true)
+  adminAlerts        Boolean  @default(true)
+  feeReminders       Boolean  @default(true)
+  language           String   @default("en")
+  darkMode           Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  actor     User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  action    String
+  entity    String
+  entityId  String?
+  metadata  String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([action, entity])
+}

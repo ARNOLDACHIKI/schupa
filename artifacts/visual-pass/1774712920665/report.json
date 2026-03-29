@@ -1,0 +1,164 @@
+[
+  {
+    "timestamp": "2026-03-28T15:48:45.849Z",
+    "viewport": "desktop",
+    "area": "student",
+    "route": "/dashboard",
+    "screenshot": "/home/lod/Documents/schupa-connect-1c8035ff/artifacts/visual-pass/1774712920665/desktop-student-dashboard.png",
+    "status": "warning",
+    "note": "Heading not clearly visible, screenshot captured for review."
+  },
+  {
+    "timestamp": "2026-03-28T15:48:46.299Z",
+    "viewport": "desktop",
+    "area": "student",
+    "route": "/results",
+    "screenshot": "/home/lod/Documents/schupa-connect-1c8035ff/artifacts/visual-pass/1774712920665/desktop-student-results.png",
+    "status": "warning",
+    "note": "Heading not clearly visible, screenshot captured for review."
+  },
+  {
+    "timestamp": "2026-03-28T15:48:46.971Z",
+    "viewport": "desktop",
+    "area": "student",
+    "route": "/fees",
+    "screenshot": "/home/lod/Documents/schupa-connect-1c8035ff/artifacts/visual-pass/1774712920665/desktop-student-fees.png",
+    "status": "ok",
+    "note": "Expected heading visible."
+  },
+  {
+    "timestamp": "2026-03-28T15:48:47.412Z",
+    "viewport": "desktop",
+    "area": "student",
+    "route": "/messages",
+    "screenshot": "/home/lod/Documents/schupa-connect-1c8035ff/artifacts/visual-pass/1774712920665/desktop-student-messages.png",
+    "status": "warning",
+    "note": "Heading not clearly visible, screenshot captured for review."
+  },
+  {
+    "timestamp": "2026-03-28T15:48:48.008Z",
+    "viewport": "desktop",
+    "area": "student",
+    "route": "/notifications",
+    "screenshot": "/home/lod/Documents/schupa-connect-1c8035ff/artifacts/visual-pass/1774712920665/desktop-student-notifications.png",
+    "status": "ok",
+    "note": "Expected heading visible."
+  },
+  {
+    "timestamp": "2026-03-28T15:48:48.797Z",
+    "viewport": "desktop",
+    "area": "student",
+    "route": "/settings",
+    "screenshot": "/home/lod/Documents/schupa-connect-1c8035ff/artifacts/visual-pass/1774712920665/desktop-student-settings.png",
+    "status": "ok",
+    "note": "Expected heading visible."
+  },
+  {
+    "timestamp": "2026-03-28T15:48:51.476Z",
+    "viewport": "desktop",
+    "area": "admin",
+    "route": "/admin",
+    "screenshot": "/home/lod/Documents/schupa-connect-1c8035ff/artifacts/visual-pass/1774712920665/desktop-admin-overview.png",
+    "status": "ok",
+    "note": "Expected heading visible."
+  },
+  {
+    "timestamp": "2026-03-28T15:48:52.137Z",
+    "viewport": "desktop",
+    "area": "admin",
+    "route": "/admin/students",
+    "screenshot": "/home/lod/Documents/schupa-connect-1c8035ff/artifacts/visual-pass/1774712920665/desktop-admin-students.png",
+    "status": "warning",
+    "note": "Heading not clearly visible, screenshot captured for review."
+  },
+  {
+    "timestamp": "2026-03-28T15:48:52.666Z",
+    "viewport": "desktop",
+    "area": "admin",
+    "route": "/messages",
+    "screenshot": "/home/lod/Documents/schupa-connect-1c8035ff/artifacts/visual-pass/1774712920665/desktop-admin-messages.png",
+    "status": "warning",
+    "note": "Heading not clearly visible, screenshot captured for review."
+  },
+  {
+    "timestamp": "2026-03-28T15:48:54.830Z",
+    "viewport": "mobile",
+    "area": "student",
+    "route": "/dashboard",
+    "screenshot": "/home/lod/Documents/schupa-connect-1c8035ff/artifacts/visual-pass/1774712920665/mobile-student-dashboard.png",
+    "status": "warning",
+    "note": "Heading not clearly visible, screenshot captured for review."
+  },
+  {
+    "timestamp": "2026-03-28T15:48:55.444Z",
+    "viewport": "mobile",
+    "area": "student",
+    "route": "/results",
+    "screenshot": "/home/lod/Documents/schupa-connect-1c8035ff/artifacts/visual-pass/1774712920665/mobile-student-results.png",
+    "status": "warning",
+    "note": "Heading not clearly visible, screenshot captured for review."
+  },
+  {
+    "timestamp": "2026-03-28T15:48:56.535Z",
+    "viewport": "mobile",
+    "area": "student",
+    "route": "/fees",
+    "screenshot": "/home/lod/Documents/schupa-connect-1c8035ff/artifacts/visual-pass/1774712920665/mobile-student-fees.png",
+    "status": "warning",
+    "note": "Heading not clearly visible, screenshot captured for review."
+  },
+  {
+    "timestamp": "2026-03-28T15:48:56.947Z",
+    "viewport": "mobile",
+    "area": "student",
+    "route": "/messages",
+    "screenshot": "/home/lod/Documents/schupa-connect-1c8035ff/artifacts/visual-pass/1774712920665/mobile-student-messages.png",
+    "status": "warning",
+    "note": "Heading not clearly visible, screenshot captured for review."
+  },
+  {
+    "timestamp": "2026-03-28T15:48:57.431Z",
+    "viewport": "mobile",
+    "area": "student",
+    "route": "/notifications",
+    "screenshot": "/home/lod/Documents/schupa-connect-1c8035ff/artifacts/visual-pass/1774712920665/mobile-student-notifications.png",
+    "status": "warning",
+    "note": "Heading not clearly visible, screenshot captured for review."
+  },
+  {
+    "timestamp": "2026-03-28T15:48:58.090Z",
+    "viewport": "mobile",
+    "area": "student",
+    "route": "/settings",
+    "screenshot": "/home/lod/Documents/schupa-connect-1c8035ff/artifacts/visual-pass/1774712920665/mobile-student-settings.png",
+    "status": "warning",
+    "note": "Heading not clearly visible, screenshot captured for review."
+  },
+  {
+    "timestamp": "2026-03-28T15:48:59.794Z",
+    "viewport": "mobile",
+    "area": "admin",
+    "route": "/admin",
+    "screenshot": "/home/lod/Documents/schupa-connect-1c8035ff/artifacts/visual-pass/1774712920665/mobile-admin-overview.png",
+    "status": "ok",
+    "note": "Expected heading visible."
+  },
+  {
+    "timestamp": "2026-03-28T15:49:00.365Z",
+    "viewport": "mobile",
+    "area": "admin",
+    "route": "/admin/students",
+    "screenshot": "/home/lod/Documents/schupa-connect-1c8035ff/artifacts/visual-pass/1774712920665/mobile-admin-students.png",
+    "status": "ok",
+    "note": "Expected heading visible."
+  },
+  {
+    "timestamp": "2026-03-28T15:49:00.700Z",
+    "viewport": "mobile",
+    "area": "admin",
+    "route": "/messages",
+    "screenshot": "/home/lod/Documents/schupa-connect-1c8035ff/artifacts/visual-pass/1774712920665/mobile-admin-messages.png",
+    "status": "warning",
+    "note": "Heading not clearly visible, screenshot captured for review."
+  }
+]

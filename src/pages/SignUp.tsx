@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, UserPlus } from "lucide-react";
 import Navbar from "@/components/Navbar";
+import schupaLogo from "@/assets/schupa-logo.png";
 
 const SignUp = () => {
   const [name, setName] = useState("");
@@ -17,7 +18,9 @@ const SignUp = () => {
   const [agreed, setAgreed] = useState(false);
   const [showPw, setShowPw] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const { signup, isLoading } = useAuth();
+  const [verificationCode, setVerificationCode] = useState("");
+  const [emailVerified, setEmailVerified] = useState(false);
+  const { signup, verifySignupCode, resendSignupCode, isLoading } = useAuth();
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -33,11 +36,84 @@ const SignUp = () => {
     const result = await signup(name, email, password);
     if (result.success) {
       setSubmitted(true);
-      toast({ title: "Account Created!", description: result.message });
+      toast({ title: "Verification Code Sent", description: result.message });
+      return;
     }
+
+    toast({ title: "Sign Up Failed", description: result.message, variant: "destructive" });
   };
 
-  if (submitted) {
+  const handleVerifyCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!/^\d{6}$/.test(verificationCode.trim())) {
+      toast({ title: "Invalid Code", description: "Enter the 6-digit verification code.", variant: "destructive" });
+      return;
+    }
+
+    const result = await verifySignupCode(email, verificationCode.trim());
+    if (!result.success) {
+      toast({ title: "Verification Failed", description: result.message, variant: "destructive" });
+      return;
+    }
+
+    setEmailVerified(true);
+    toast({ title: "Email Verified", description: result.message });
+  };
+
+  const handleResendCode = async () => {
+    const result = await resendSignupCode(email);
+    if (!result.success) {
+      toast({ title: "Unable to Resend", description: result.message, variant: "destructive" });
+      return;
+    }
+
+    toast({ title: "Code Sent", description: result.message });
+  };
+
+  if (submitted && !emailVerified) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="flex items-center justify-center min-h-screen pt-16 px-4">
+          <Card className="w-full max-w-md border-border/50 shadow-xl">
+            <CardHeader className="text-center">
+              <CardTitle className="font-display text-2xl">Verify Your Email</CardTitle>
+              <CardDescription>
+                Enter the 6-digit code sent to {email}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleVerifyCode} className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-1 block">Verification Code</label>
+                  <Input
+                    placeholder="123456"
+                    inputMode="numeric"
+                    maxLength={6}
+                    value={verificationCode}
+                    onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ""))}
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90" disabled={isLoading}>
+                  {isLoading ? "Verifying..." : "Verify Code"}
+                </Button>
+              </form>
+              <Button type="button" variant="outline" className="w-full mt-3" onClick={() => void handleResendCode()} disabled={isLoading}>
+                Resend Code
+              </Button>
+              <p className="text-center text-xs text-muted-foreground mt-4">
+                Verification code expires in 15 minutes.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  if (submitted && emailVerified) {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
@@ -47,9 +123,10 @@ const SignUp = () => {
               <div className="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center mx-auto mb-4">
                 <UserPlus className="w-8 h-8 text-accent" />
               </div>
-              <h2 className="font-display text-2xl font-bold text-foreground mb-2">Awaiting Approval</h2>
+              <h2 className="font-display text-2xl font-bold text-foreground mb-2">Email Verified</h2>
               <p className="text-muted-foreground mb-6">
-                Your account has been created successfully! Please wait for admin approval before you can log in.
+                Your scholarship application has been submitted and is now pending admin approval.
+                You can sign in once your account is approved.
               </p>
               <Link to="/signin">
                 <Button variant="outline">Back to Sign In</Button>
@@ -67,9 +144,7 @@ const SignUp = () => {
       <div className="flex items-center justify-center min-h-screen pt-16 px-4">
         <Card className="w-full max-w-md border-border/50 shadow-xl">
           <CardHeader className="text-center">
-            <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center mx-auto mb-2">
-              <span className="text-primary-foreground font-display font-bold">S</span>
-            </div>
+            <img src={schupaLogo} alt="SCHUPA logo" className="w-12 h-12 rounded-xl object-cover mx-auto mb-2" />
             <CardTitle className="font-display text-2xl">Create Account</CardTitle>
             <CardDescription>Join SCHUPA and start your journey</CardDescription>
           </CardHeader>

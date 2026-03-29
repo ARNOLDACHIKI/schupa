@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState, type ChangeEvent } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -9,38 +9,173 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { User, GraduationCap, DollarSign, FileText, Upload, LogOut, Home, CheckCircle, Circle, Clock } from "lucide-react";
+import { User, GraduationCap, DollarSign, FileText, Upload, Home, CheckCircle, Circle, Clock, Settings, Bell, Eye, EyeOff } from "lucide-react";
+import Navbar from "@/components/Navbar";
 import { type Student } from "@/data/mockData";
 
 const StudentDashboard = () => {
-  const { user, logout, students, setStudents } = useAuth();
+  const { user, students, uploadResult, uploadFeeRecord, updateStudentProfile, uploadStudentDocument, uploadProfilePhoto, isDataLoading, isAuthInitialized } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<"overview" | "results" | "fees" | "profile">("overview");
+  const [profileForm, setProfileForm] = useState({
+    photo: "",
+    bio: "",
+    course: "",
+    institution: "",
+    yearJoined: "",
+    currentYear: "",
+    totalYears: "",
+  });
+  const [schoolIdFile, setSchoolIdFile] = useState<File | null>(null);
+  const [isSchoolIdVisible, setIsSchoolIdVisible] = useState(false);
 
   const student = students.find((s) => s.email === user?.email) || students[0];
+  const latestSchoolId = student?.documents?.find((doc) => doc.type === "school_id");
 
-  const handleLogout = () => {
-    logout();
-    navigate("/");
+  useEffect(() => {
+    if (!student) {
+      return;
+    }
+
+    setProfileForm({
+      photo: student.photo || "",
+      bio: student.bio || "",
+      course: student.course,
+      institution: student.institution,
+      yearJoined: String(student.yearJoined),
+      currentYear: String(student.currentYear),
+      totalYears: String(student.totalYears),
+    });
+  }, [student]);
+
+  const handlePhotoUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    if (!student) {
+      return;
+    }
+
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    try {
+      const photo = await uploadProfilePhoto(student.id, file);
+      setProfileForm((prev) => ({ ...prev, photo }));
+      toast({ title: "Photo Updated", description: "Your profile photo has been updated successfully." });
+    } catch (error) {
+      toast({
+        title: "Upload Failed",
+        description: error instanceof Error ? error.message : "Unable to upload profile photo.",
+        variant: "destructive",
+      });
+    } finally {
+      event.target.value = "";
+    }
   };
 
-  const handlePhotoUpload = () => {
-    toast({ title: "Photo Updated", description: "Your profile photo has been updated successfully." });
+  const handleSchoolIdUpload = async () => {
+    if (!schoolIdFile) {
+      return;
+    }
+
+    try {
+      await uploadStudentDocument(student.id, "school_id", schoolIdFile);
+      setSchoolIdFile(null);
+      toast({ title: "School ID Uploaded", description: "Your school ID has been uploaded successfully." });
+    } catch (error) {
+      toast({
+        title: "Upload Failed",
+        description: error instanceof Error ? error.message : "Unable to upload school ID.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleResultUpload = () => {
-    toast({ title: "Results Uploaded", description: "Your transcript has been uploaded for review." });
+  const handleResultUpload = async () => {
+    try {
+      await uploadResult(student.id, {
+        semester: `Y${student.currentYear} S${student.results.length % 2 === 0 ? 2 : 1}`,
+        year: student.currentYear,
+        gpa: 3.5,
+      });
+      toast({ title: "Results Uploaded", description: "Your transcript has been uploaded for review." });
+    } catch (error) {
+      toast({
+        title: "Upload Failed",
+        description: error instanceof Error ? error.message : "Unable to upload results right now.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleFeeUpload = () => {
-    toast({ title: "Fee Statement Uploaded", description: "Your fee statement has been submitted." });
+  const handleFeeUpload = async () => {
+    try {
+      await uploadFeeRecord(student.id, {
+        date: new Date().toISOString().split("T")[0],
+        description: "Uploaded fee statement",
+        amount: 50000,
+        type: "payment",
+      });
+      toast({ title: "Fee Statement Uploaded", description: "Your fee statement has been submitted." });
+    } catch (error) {
+      toast({
+        title: "Upload Failed",
+        description: error instanceof Error ? error.message : "Unable to upload fee statement right now.",
+        variant: "destructive",
+      });
+    }
   };
+
+  if (!isAuthInitialized) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">Checking your session...</p>
+      </div>
+    );
+  }
 
   if (!user) {
     navigate("/signin");
     return null;
   }
+
+  if (isDataLoading && !student) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">Loading your dashboard...</p>
+      </div>
+    );
+  }
+
+  if (!student) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">Student profile is not available yet.</p>
+      </div>
+    );
+  }
+
+  const handleProfileSave = async () => {
+    try {
+      await updateStudentProfile(student.id, {
+        photo: profileForm.photo,
+        bio: profileForm.bio,
+        course: profileForm.course.trim(),
+        institution: profileForm.institution.trim(),
+        yearJoined: Number(profileForm.yearJoined),
+        currentYear: Number(profileForm.currentYear),
+        totalYears: Number(profileForm.totalYears),
+      });
+      toast({ title: "Profile Updated", description: "Your details have been saved." });
+    } catch (error) {
+      toast({
+        title: "Update Failed",
+        description: error instanceof Error ? error.message : "Unable to save profile.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const tabs = [
     { id: "overview" as const, label: "Overview", icon: Home },
@@ -58,23 +193,9 @@ const StudentDashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Top bar */}
-      <header className="bg-primary text-primary-foreground h-16 flex items-center justify-between px-4 md:px-8 sticky top-0 z-50">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center">
-            <span className="font-display font-bold text-sm text-accent-foreground">S</span>
-          </div>
-          <span className="font-display font-semibold text-lg hidden sm:block">SCHUPA</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-primary-foreground/80 hidden sm:block">{user.name}</span>
-          <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/10" onClick={handleLogout}>
-            <LogOut className="w-4 h-4" />
-          </Button>
-        </div>
-      </header>
+      <Navbar />
 
-      <div className="flex">
+      <div className="pt-16 flex">
         {/* Sidebar */}
         <aside className="w-16 md:w-56 bg-card border-r border-border min-h-[calc(100vh-4rem)] p-2 md:p-4 flex-shrink-0">
           <nav className="space-y-1">
@@ -103,6 +224,37 @@ const StudentDashboard = () => {
               <div className="bg-gradient-to-r from-primary to-primary/80 rounded-2xl p-6 md:p-8 text-primary-foreground">
                 <h1 className="font-display text-2xl md:text-3xl font-bold mb-2">Welcome back, {user.name}! 👋</h1>
                 <p className="text-primary-foreground/80">Here's your academic journey at a glance.</p>
+              </div>
+
+              {/* Quick Actions */}
+              <div className="grid md:grid-cols-3 gap-4">
+                <Button
+                  variant="outline"
+                  className="h-auto p-4 flex flex-col items-start gap-2 justify-start border-border/50 hover:border-accent"
+                  onClick={() => navigate("/results")}
+                >
+                  <GraduationCap className="w-5 h-5 text-accent" />
+                  <span className="text-sm font-semibold">Upload Results</span>
+                  <span className="text-xs text-muted-foreground">Add your transcripts</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-auto p-4 flex flex-col items-start gap-2 justify-start border-border/50 hover:border-accent"
+                  onClick={() => navigate("/fees")}
+                >
+                  <DollarSign className="w-5 h-5 text-accent" />
+                  <span className="text-sm font-semibold">View Fees</span>
+                  <span className="text-xs text-muted-foreground">Check balance</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-auto p-4 flex flex-col items-start gap-2 justify-start border-border/50 hover:border-accent"
+                  onClick={() => navigate("/notifications")}
+                >
+                  <Bell className="w-5 h-5 text-accent" />
+                  <span className="text-sm font-semibold">Notifications</span>
+                  <span className="text-xs text-muted-foreground">2 new messages</span>
+                </Button>
               </div>
 
               {/* Quick stats */}
@@ -330,18 +482,48 @@ const StudentDashboard = () => {
                           {student.name.split(" ").map((n) => n[0]).join("")}
                         </AvatarFallback>
                       </Avatar>
-                      <button
-                        onClick={handlePhotoUpload}
-                        className="absolute bottom-0 right-0 w-8 h-8 bg-accent text-accent-foreground rounded-full flex items-center justify-center hover:bg-accent/90 transition-colors"
-                      >
+                      <label className="absolute bottom-0 right-0 w-8 h-8 bg-accent text-accent-foreground rounded-full flex items-center justify-center hover:bg-accent/90 transition-colors cursor-pointer">
                         <Upload className="w-4 h-4" />
-                      </button>
+                        <Input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+                      </label>
                     </div>
                     <div className="text-center sm:text-left">
                       <h3 className="font-display text-xl font-bold text-foreground">{student.name}</h3>
                       <p className="text-muted-foreground">{student.email}</p>
+                      <p className="text-sm text-muted-foreground mt-2">{student.bio || "No bio added yet."}</p>
                     </div>
                   </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-border/50">
+                <CardHeader>
+                  <CardTitle className="font-display text-lg">School ID</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Input type="file" accept=".pdf,image/*" onChange={(e) => setSchoolIdFile(e.target.files?.[0] || null)} />
+                  <div className="flex flex-wrap gap-3">
+                    <Button variant="outline" onClick={handleSchoolIdUpload} disabled={!schoolIdFile}>
+                      <Upload className="w-4 h-4 mr-2" /> Upload School ID
+                    </Button>
+                    {latestSchoolId ? (
+                      <Button variant="ghost" onClick={() => setIsSchoolIdVisible((prev) => !prev)}>
+                        {isSchoolIdVisible ? <EyeOff className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
+                        {isSchoolIdVisible ? "Hide School ID" : "Show School ID"}
+                      </Button>
+                    ) : null}
+                  </div>
+                  {latestSchoolId ? (
+                    isSchoolIdVisible ? (
+                      <a href={latestSchoolId.url} target="_blank" rel="noreferrer" className="text-sm text-primary underline-offset-4 hover:underline">
+                        {latestSchoolId.name}
+                      </a>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">School ID uploaded and currently hidden.</p>
+                    )
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No school ID document uploaded yet.</p>
+                  )}
                 </CardContent>
               </Card>
 
@@ -360,6 +542,52 @@ const StudentDashboard = () => {
                   </Card>
                 ))}
               </div>
+
+              <Card className="border-border/50">
+                <CardHeader>
+                  <CardTitle className="font-display text-lg">Edit Profile</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium text-foreground mb-1 block">Profile Photo</label>
+                      <Input type="file" accept="image/*" onChange={handlePhotoUpload} />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-foreground mb-1 block">Course</label>
+                      <Input value={profileForm.course} onChange={(e) => setProfileForm((prev) => ({ ...prev, course: e.target.value }))} />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-foreground mb-1 block">Institution</label>
+                      <Input value={profileForm.institution} onChange={(e) => setProfileForm((prev) => ({ ...prev, institution: e.target.value }))} />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-foreground mb-1 block">Year Joined</label>
+                      <Input type="number" value={profileForm.yearJoined} onChange={(e) => setProfileForm((prev) => ({ ...prev, yearJoined: e.target.value }))} />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-foreground mb-1 block">Current Year</label>
+                      <Input type="number" value={profileForm.currentYear} onChange={(e) => setProfileForm((prev) => ({ ...prev, currentYear: e.target.value }))} />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-foreground mb-1 block">Total Years</label>
+                      <Input type="number" value={profileForm.totalYears} onChange={(e) => setProfileForm((prev) => ({ ...prev, totalYears: e.target.value }))} />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-1 block">Bio</label>
+                    <Textarea value={profileForm.bio} onChange={(e) => setProfileForm((prev) => ({ ...prev, bio: e.target.value }))} rows={4} />
+                  </div>
+                  <div className="flex flex-wrap gap-3">
+                    <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleProfileSave}>
+                      Save Profile
+                    </Button>
+                    <Button variant="outline" onClick={() => navigate("/profile-settings")}>
+                      <Settings className="w-4 h-4 mr-2" /> Open Full Profile Settings
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           )}
         </main>

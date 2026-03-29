@@ -1,0 +1,100 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - region "Notifications (F8)":
+      - list
+    - region "Notifications alt+T"
+    - generic [ref=e3]:
+      - navigation [ref=e4]:
+        - generic [ref=e5]:
+          - link "SCHUPA logo SCHUPA" [ref=e6] [cursor=pointer]:
+            - /url: /
+            - img "SCHUPA logo" [ref=e7]
+            - generic [ref=e8]: SCHUPA
+          - generic [ref=e9]:
+            - link "Home" [ref=e10] [cursor=pointer]:
+              - /url: /#home
+            - link "About" [ref=e11] [cursor=pointer]:
+              - /url: /#about
+            - link "Programs" [ref=e12] [cursor=pointer]:
+              - /url: /#programs
+            - link "Schools" [ref=e13] [cursor=pointer]:
+              - /url: /#schools
+            - link "Donations" [ref=e14] [cursor=pointer]:
+              - /url: /#donations
+            - link "Contact" [ref=e15] [cursor=pointer]:
+              - /url: /#contact
+          - generic [ref=e16]:
+            - button "Messages" [ref=e17] [cursor=pointer]:
+              - img
+              - text: Messages
+            - button "Privacy" [ref=e18] [cursor=pointer]:
+              - img
+              - text: Privacy
+            - button "Logout" [ref=e19] [cursor=pointer]:
+              - img
+              - text: Logout
+      - generic [ref=e20]:
+        - complementary [ref=e21]:
+          - navigation [ref=e22]:
+            - button "Overview" [ref=e23] [cursor=pointer]:
+              - img [ref=e24]
+              - generic [ref=e27]: Overview
+            - button "Students" [ref=e28] [cursor=pointer]:
+              - img [ref=e29]
+              - generic [ref=e34]: Students
+            - button "Pending (7)" [ref=e35] [cursor=pointer]:
+              - img [ref=e36]
+              - generic [ref=e40]: Pending (7)
+            - button "Analytics" [ref=e41] [cursor=pointer]:
+              - img [ref=e42]
+              - generic [ref=e44]: Analytics
+            - button "Inquiries (2)" [ref=e45] [cursor=pointer]:
+              - img [ref=e46]
+              - generic [ref=e49]: Inquiries (2)
+        - main [ref=e50]:
+          - generic [ref=e51]:
+            - generic [ref=e52]:
+              - heading "Admin Dashboard" [level=1] [ref=e53]
+              - paragraph [ref=e54]: Manage students, track progress, and monitor sponsorships.
+            - generic [ref=e55]:
+              - generic [ref=e57]:
+                - generic [ref=e58]:
+                  - img [ref=e59]
+                  - generic [ref=e64]: Total Students
+                - paragraph [ref=e65]: "31"
+              - generic [ref=e67]:
+                - generic [ref=e68]:
+                  - img [ref=e69]
+                  - generic [ref=e73]: Pending Approval
+                - paragraph [ref=e74]: "7"
+              - generic [ref=e76]:
+                - generic [ref=e77]:
+                  - img [ref=e78]
+                  - generic [ref=e80]: Total Fee Balance
+                - paragraph [ref=e81]: KES -100,000
+              - generic [ref=e83]:
+                - generic [ref=e84]:
+                  - img [ref=e85]
+                  - generic [ref=e88]: Avg GPA
+                - paragraph [ref=e89]: "0.48"
+            - generic [ref=e90]:
+              - heading "Enrollment by Course" [level=3] [ref=e92]
+              - generic [ref=e95]:
+                - img [ref=e96]:
+                  - generic [ref=e103]: Pending Course …
+                  - generic [ref=e105]:
+                    - generic [ref=e107]: "0"
+                    - generic [ref=e109]: "8"
+                    - generic [ref=e111]: "16"
+                    - generic [ref=e113]: "24"
+                    - generic [ref=e115]: "32"
+                - generic:
+                  - generic:
+                    - paragraph: Pending Course …
+                    - list:
+                      - listitem: "count : 31"
+  - generic [ref=e120]: "0"
+```

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -10,12 +11,19 @@ import Navbar from "@/components/Navbar";
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
+  const { forgotPassword } = useAuth();
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const result = await forgotPassword(email);
+    if (!result.success) {
+      toast({ title: "Request Failed", description: result.message, variant: "destructive" });
+      return;
+    }
+
     setSent(true);
-    toast({ title: "Reset Link Sent", description: "Check your email for password reset instructions." });
+    toast({ title: "Reset Link Sent", description: result.message });
   };
 
   return (

@@ -7,24 +7,28 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, LogIn } from "lucide-react";
 import Navbar from "@/components/Navbar";
+import schupaLogo from "@/assets/schupa-logo.png";
 
 const SignIn = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
+  const [showPendingApprovalNotice, setShowPendingApprovalNotice] = useState(false);
   const { login, isLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setShowPendingApprovalNotice(false);
     const result = await login(email, password);
     if (result.success) {
       toast({ title: "Welcome back!", description: result.message });
-      // Role-based redirect happens in AuthContext — check user role
-      const isAdmin = email === "admin@schupa.org";
-      navigate(isAdmin ? "/admin" : "/dashboard");
+      navigate(result.role === "admin" ? "/admin" : "/dashboard");
     } else {
+      if (result.message.toLowerCase().includes("pending admin approval")) {
+        setShowPendingApprovalNotice(true);
+      }
       toast({ title: "Login Failed", description: result.message, variant: "destructive" });
     }
   };
@@ -35,9 +39,7 @@ const SignIn = () => {
       <div className="flex items-center justify-center min-h-screen pt-16 px-4">
         <Card className="w-full max-w-md border-border/50 shadow-xl">
           <CardHeader className="text-center">
-            <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center mx-auto mb-2">
-              <span className="text-primary-foreground font-display font-bold">S</span>
-            </div>
+            <img src={schupaLogo} alt="SCHUPA logo" className="w-12 h-12 rounded-xl object-cover mx-auto mb-2" />
             <CardTitle className="font-display text-2xl">Welcome Back</CardTitle>
             <CardDescription>Sign in to your SCHUPA account</CardDescription>
           </CardHeader>
@@ -63,11 +65,11 @@ const SignIn = () => {
                 {isLoading ? "Signing in..." : <><LogIn className="w-4 h-4 mr-2" /> Sign In</>}
               </Button>
             </form>
-            <div className="mt-6 p-3 rounded-lg bg-secondary text-sm">
-              <p className="font-medium text-foreground mb-1">Demo Accounts:</p>
-              <p className="text-muted-foreground">Admin: admin@schupa.org / Admin@2026</p>
-              <p className="text-muted-foreground">Student: student@schupa.org / Student@2026</p>
-            </div>
+            {showPendingApprovalNotice && (
+              <div className="mt-4 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                Your application is under review by admin. You will be able to sign in once approval is completed.
+              </div>
+            )}
             <p className="text-center text-sm text-muted-foreground mt-4">
               Don't have an account? <Link to="/signup" className="text-accent hover:underline font-medium">Sign Up</Link>
             </p>
