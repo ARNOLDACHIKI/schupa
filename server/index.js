@@ -179,6 +179,27 @@ const isTransientDbTimeout = (error) => {
   return error?.code === "ETIMEDOUT" || message.includes("ETIMEDOUT");
 };
 
+const isMissingRelationError = (error) => {
+  const message = String(error?.message || "");
+  return (
+    error?.code === "P2021" ||
+    message.includes("relation") && message.includes("does not exist") ||
+    message.includes("table") && message.includes("does not exist")
+  );
+};
+
+const runBestEffortDbTask = async (task, label) => {
+  try {
+    await withDbRetry(task);
+  } catch (error) {
+    if (isMissingRelationError(error)) {
+      console.warn(`[db] Skipping ${label}:`, error.message);
+      return;
+    }
+    throw error;
+  }
+};
+
 const withDbRetry = async (operation, maxAttempts = 3) => {
   let attempt = 0;
   while (attempt < maxAttempts) {
@@ -391,7 +412,7 @@ app.post(
       })
     );
 
-    await withDbRetry(() =>
+    await runBestEffortDbTask(() =>
       prisma.studentProfile.upsert({
         where: { userId: user.id },
         update: {},
@@ -405,9 +426,9 @@ app.post(
           totalYears: 4,
         },
       })
-    );
+    , "student profile bootstrap");
 
-    await withDbRetry(() =>
+    await runBestEffortDbTask(() =>
       prisma.userPreference.upsert({
         where: { userId: user.id },
         update: {},
@@ -415,9 +436,9 @@ app.post(
           userId: user.id,
         },
       })
-    );
+    , "user preference bootstrap");
 
-    await withDbRetry(() =>
+    await runBestEffortDbTask(() =>
       prisma.auditLog.create({
         data: {
           actorId: user.id,
@@ -427,7 +448,7 @@ app.post(
           metadata: JSON.stringify({ email: user.email }),
         },
       })
-    );
+    , "signup audit log");
 
     try {
       await sendSignupVerificationCodeEmail(body.name, body.email, verificationCode);
