@@ -69,11 +69,13 @@ Configuration is in `vercel.json`.
 - `EMAIL_USER`
 - `EMAIL_PASSWORD`
 - `EMAIL_FROM`
+- Optional for predictable preview admin login: `AUTO_SEED_ADMIN`, `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD`, `SEED_ADMIN_NAME`
 
 Important for preview deployments:
 
 - Add these variables to both Production and Preview environments in Vercel.
 - If a preview URL should be shared for testing, disable Vercel Deployment Protection for that preview (or use a protection bypass) so `/api/*` routes are reachable.
+- By default, preview deployments auto-seed the admin account when `AUTO_SEED_ADMIN` is not set. Set `AUTO_SEED_ADMIN=false` to disable this behavior.
 
 For Neon, use the SSL connection string format in `DATABASE_URL`, for example:
 

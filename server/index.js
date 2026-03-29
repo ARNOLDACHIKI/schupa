@@ -25,6 +25,11 @@ import {
 const app = express();
 const PORT = Number(process.env.PORT || 4000);
 const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-change-me";
+const ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL || "admin@schupa.org";
+const ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD || "Admin@2026";
+const ADMIN_NAME = process.env.SEED_ADMIN_NAME || "SCHUPA Admin";
+const AUTO_SEED_ADMIN =
+  (process.env.AUTO_SEED_ADMIN || (process.env.VERCEL_ENV === "preview" ? "true" : "false")) === "true";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const isVercelRuntime = process.env.VERCEL === "1";
@@ -216,6 +221,34 @@ const withDbRetry = async (operation, maxAttempts = 3) => {
   throw new Error("Database operation failed after retries.");
 };
 
+const ensureAdminAccount = async () => {
+  if (!AUTO_SEED_ADMIN) {
+    return;
+  }
+
+  const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 10);
+  await withDbRetry(() =>
+    prisma.user.upsert({
+      where: { email: ADMIN_EMAIL },
+      update: {
+        name: ADMIN_NAME,
+        passwordHash,
+        role: UserRole.ADMIN,
+        approved: true,
+        emailVerified: true,
+      },
+      create: {
+        name: ADMIN_NAME,
+        email: ADMIN_EMAIL,
+        passwordHash,
+        role: UserRole.ADMIN,
+        approved: true,
+        emailVerified: true,
+      },
+    })
+  );
+};
+
 const toUserDto = (user) => ({
   id: user.id,
   email: user.email,
@@ -351,7 +384,13 @@ app.post(
   asyncHandler(async (req, res) => {
     const body = z.object({ email: z.string().email(), password: z.string().min(1) }).parse(req.body);
 
-    const user = await withDbRetry(() => prisma.user.findUnique({ where: { email: body.email } }));
+    let user = await withDbRetry(() => prisma.user.findUnique({ where: { email: body.email } }));
+
+    if (AUTO_SEED_ADMIN && body.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+      await ensureAdminAccount();
+      user = await withDbRetry(() => prisma.user.findUnique({ where: { email: body.email } }));
+    }
+
     if (!user) {
       return res.status(401).json({ message: "Invalid email or password." });
     }
