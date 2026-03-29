@@ -392,33 +392,41 @@ app.post(
     );
 
     await withDbRetry(() =>
-      prisma.$transaction([
-        prisma.studentProfile.create({
-          data: {
-            userId: user.id,
-            bio: "",
-            course: "Pending Course Assignment",
-            institution: "Pending Institution Assignment",
-            yearJoined: new Date().getFullYear(),
-            currentYear: 1,
-            totalYears: 4,
-          },
-        }),
-        prisma.userPreference.create({
-          data: {
-            userId: user.id,
-          },
-        }),
-        prisma.auditLog.create({
-          data: {
-            actorId: user.id,
-            action: "auth.signup",
-            entity: "user",
-            entityId: user.id,
-            metadata: JSON.stringify({ email: user.email }),
-          },
-        }),
-      ])
+      prisma.studentProfile.upsert({
+        where: { userId: user.id },
+        update: {},
+        create: {
+          userId: user.id,
+          bio: "",
+          course: "Pending Course Assignment",
+          institution: "Pending Institution Assignment",
+          yearJoined: new Date().getFullYear(),
+          currentYear: 1,
+          totalYears: 4,
+        },
+      })
+    );
+
+    await withDbRetry(() =>
+      prisma.userPreference.upsert({
+        where: { userId: user.id },
+        update: {},
+        create: {
+          userId: user.id,
+        },
+      })
+    );
+
+    await withDbRetry(() =>
+      prisma.auditLog.create({
+        data: {
+          actorId: user.id,
+          action: "auth.signup",
+          entity: "user",
+          entityId: user.id,
+          metadata: JSON.stringify({ email: user.email }),
+        },
+      })
     );
 
     try {

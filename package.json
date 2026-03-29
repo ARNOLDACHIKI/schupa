@@ -10,6 +10,7 @@
     "start:api": "node server/index.js",
     "postinstall": "prisma generate",
     "build": "vite build",
+    "vercel-build": "prisma generate && prisma db push && vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
