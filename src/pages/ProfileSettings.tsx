@@ -108,6 +108,11 @@ const ProfileSettings = () => {
       return;
     }
 
+    if (currentYear < 1 || currentYear > 5 || totalYears < 1 || totalYears > 5) {
+      toast({ title: "Invalid Academic Years", description: "Current year and total years must be between 1 and 5.", variant: "destructive" });
+      return;
+    }
+
     if (currentYear > totalYears) {
       toast({ title: "Invalid Academic Years", description: "Current year cannot exceed total years.", variant: "destructive" });
       return;
@@ -140,6 +145,26 @@ const ProfileSettings = () => {
 
     const file = event.target.files?.[0];
     if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      toast({
+        title: "Upload Failed",
+        description: "Please select an image file for your profile photo.",
+        variant: "destructive",
+      });
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast({
+        title: "Upload Failed",
+        description: "Profile photo must be smaller than 10MB.",
+        variant: "destructive",
+      });
+      event.target.value = "";
       return;
     }
 
@@ -219,11 +244,11 @@ const ProfileSettings = () => {
                   </div>
                   <div>
                     <label className="text-sm font-medium text-foreground mb-1 block">Current Year</label>
-                    <Input type="number" value={form.currentYear} onChange={(e) => setForm((prev) => ({ ...prev, currentYear: e.target.value }))} />
+                    <Input type="number" min="1" max="5" value={form.currentYear} onChange={(e) => setForm((prev) => ({ ...prev, currentYear: e.target.value }))} />
                   </div>
                   <div>
                     <label className="text-sm font-medium text-foreground mb-1 block">Total Years</label>
-                    <Input type="number" value={form.totalYears} onChange={(e) => setForm((prev) => ({ ...prev, totalYears: e.target.value }))} />
+                    <Input type="number" min="1" max="5" value={form.totalYears} onChange={(e) => setForm((prev) => ({ ...prev, totalYears: e.target.value }))} />
                   </div>
                 </div>
                 <div className="rounded-md border border-border/60 p-4 space-y-3">

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Eye, Trash2 } from "lucide-react";
+import { Search, Eye, Trash2, Download } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { type Student } from "@/data/mockData";
 
@@ -60,6 +60,23 @@ const AdminStudentManagement = () => {
         });
       }
     }
+  };
+
+  const handleDownloadLatestTranscript = (student: Student) => {
+    const latestResultDoc = (student.documents || [])
+      .filter((doc) => doc.type === "result")
+      .sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime())[0];
+
+    if (!latestResultDoc) {
+      toast({
+        title: "No transcript found",
+        description: "This student has not uploaded a result/transcript file yet.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    window.open(latestResultDoc.url, "_blank", "noopener,noreferrer");
   };
 
   const handleViewDetails = (studentId: string) => {
@@ -205,6 +222,15 @@ const AdminStudentManagement = () => {
                             className="text-accent hover:bg-accent/10"
                           >
                             <Eye className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDownloadLatestTranscript(student)}
+                            className="text-primary hover:bg-primary/10"
+                            title="Download latest transcript"
+                          >
+                            <Download className="w-4 h-4" />
                           </Button>
                           <Button
                             variant="ghost"

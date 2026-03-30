@@ -34,7 +34,7 @@ const ResultsUpload = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [semester, setSemester] = useState("");
   const [gpa, setGpa] = useState("");
-  const [year, setYear] = useState(new Date().getFullYear().toString());
+  const [year, setYear] = useState("1");
 
   const [results, setResults] = useState<Result[]>([]);
   const [documents, setDocuments] = useState<UploadedDocument[]>([]);
@@ -43,6 +43,8 @@ const ResultsUpload = () => {
 
   useEffect(() => {
     if (!student) return;
+
+    setYear(String(Math.min(5, Math.max(1, student.currentYear || 1))));
 
     setResults(
       student.results.map((item) => ({
@@ -106,8 +108,8 @@ const ResultsUpload = () => {
       return;
     }
 
-    if (!Number.isFinite(parsedYear) || parsedYear < 1) {
-      toast({ title: "Error", description: "Enter a valid year.", variant: "destructive" });
+    if (!Number.isFinite(parsedYear) || parsedYear < 1 || parsedYear > 5) {
+      toast({ title: "Error", description: "Year must be between 1 and 5.", variant: "destructive" });
       return;
     }
 
@@ -199,6 +201,8 @@ const ResultsUpload = () => {
                     <label className="text-sm font-medium block mb-1">Year</label>
                     <Input
                       type="number"
+                      min="1"
+                      max="5"
                       value={year}
                       onChange={(e) => setYear(e.target.value)}
                     />

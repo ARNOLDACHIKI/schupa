@@ -823,7 +823,7 @@ app.post(
     const body = z
       .object({
         semester: z.string().trim().min(2, "Semester is required."),
-        year: z.coerce.number().int().min(1, "Year must be a positive number."),
+        year: z.coerce.number().int().min(1, "Year must be between 1 and 5.").max(5, "Year must be between 1 and 5."),
         gpa: z.coerce.number().min(0, "GPA must be at least 0.").max(5, "GPA cannot exceed 5.0."),
       })
       .parse(req.body);
@@ -871,7 +871,7 @@ app.post(
         date: z.string().trim().min(8, "Payment date is required."),
         description: z.string().trim().min(3, "Description must be at least 3 characters."),
         amount: z.coerce.number().positive("Amount must be greater than 0."),
-        type: z.enum(["payment", "charge"]),
+        type: z.literal("payment"),
       })
       .parse(req.body);
 
@@ -891,7 +891,7 @@ app.post(
         date: parsedDate,
         description: body.description,
         amount: body.amount,
-        type: body.type === "payment" ? FeeType.PAYMENT : FeeType.CHARGE,
+        type: FeeType.PAYMENT,
       },
     });
 
@@ -899,7 +899,7 @@ app.post(
       profile.userId,
       NotificationType.FEE,
       "Fee Record Updated",
-      `${body.type === "payment" ? "Payment" : "Charge"} of KES ${body.amount.toLocaleString()} was added.`
+      `Payment of KES ${body.amount.toLocaleString()} was added.`
     );
 
     await logAudit({
@@ -926,8 +926,8 @@ app.patch(
         course: z.string().trim().min(2, "Course must be at least 2 characters."),
         institution: z.string().trim().min(2, "Institution must be at least 2 characters."),
         yearJoined: z.coerce.number().int().min(1990).max(2100),
-        currentYear: z.coerce.number().int().min(1).max(15),
-        totalYears: z.coerce.number().int().min(1).max(15),
+        currentYear: z.coerce.number().int().min(1).max(5),
+        totalYears: z.coerce.number().int().min(1).max(5),
       })
       .parse(req.body);
 
@@ -1650,6 +1650,13 @@ app.use((err, _req, res, _next) => {
       message: firstIssue ? `Invalid request payload: ${firstIssue}` : "Invalid request payload.",
       issues: err.issues,
     });
+  }
+
+  if (err instanceof multer.MulterError) {
+    if (err.code === "LIMIT_FILE_SIZE") {
+      return res.status(400).json({ message: "File must be smaller than 10MB." });
+    }
+    return res.status(400).json({ message: "File upload failed." });
   }
 
   console.error(err);

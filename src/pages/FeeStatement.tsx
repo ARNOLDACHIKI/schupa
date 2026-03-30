@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, DollarSign, AlertCircle, TrendingUp, Calendar } from "lucide-react";
+import { Upload, AlertCircle, TrendingUp, Calendar } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { apiRequest, apiUploadRequest } from "@/lib/api";
 
@@ -17,7 +17,7 @@ interface FeeRecord {
   description: string;
   amount: number;
   type: "charge" | "payment";
-  status: "pending" | "completed";
+  status: string;
 }
 
 const FeeStatement = () => {
@@ -25,10 +25,10 @@ const FeeStatement = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [description, setDescription] = useState("Uploaded payment");
+  const [isStructureUploading, setIsStructureUploading] = useState(false);
+  const [feeStructureFile, setFeeStructureFile] = useState<File | null>(null);
   const [amount, setAmount] = useState("");
-  const [recordType, setRecordType] = useState<"payment" | "charge">("payment");
+  const [feeStatus, setFeeStatus] = useState("Fee Semester 1 cleared");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
 
   const [documents, setDocuments] = useState<Array<{ id: string; name: string; uploadedAt: string }>>([]);
@@ -42,27 +42,32 @@ const FeeStatement = () => {
         description: record.description,
         amount: record.amount,
         type: record.type,
-        status: "completed",
+        status: record.type === "payment" ? record.description || "Payment recorded" : "Charge entry",
       })),
     [student]
   );
-
-  const totalCharges = feeRecords
-    .filter((r) => r.type === "charge")
-    .reduce((sum, r) => sum + r.amount, 0);
 
   const totalPayments = feeRecords
     .filter((r) => r.type === "payment")
     .reduce((sum, r) => sum + r.amount, 0);
 
-  const balance = totalCharges - totalPayments;
+  const latestPaymentDate = feeRecords
+    .filter((r) => r.type === "payment")
+    .sort((a, b) => b.date.getTime() - a.date.getTime())[0]?.date;
+
+  const semesterOneCleared = feeRecords.some(
+    (record) => record.type === "payment" && record.description.toLowerCase().includes("semester 1")
+  );
+  const semesterTwoCleared = feeRecords.some(
+    (record) => record.type === "payment" && record.description.toLowerCase().includes("semester 2")
+  );
 
   useEffect(() => {
     const loadDocuments = async () => {
       if (!student) return;
       try {
         const response = await apiRequest<{
-          documents: Array<{ id: string; type: "result" | "fee_statement"; name: string; uploadedAt: string }>;
+          documents: Array<{ id: string; type: "result" | "fee_statement" | "school_id"; name: string; uploadedAt: string }>;
         }>(`/students/${student.id}/documents`);
         setDocuments(
           response.documents
@@ -95,7 +100,7 @@ const FeeStatement = () => {
     return null;
   }
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFeeStructureFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 10 * 1024 * 1024) {
@@ -106,18 +111,18 @@ const FeeStatement = () => {
         });
         return;
       }
-      setSelectedFile(file);
+      setFeeStructureFile(file);
     }
   };
 
-  const handleUpload = async (e: React.FormEvent) => {
+  const handlePaymentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const parsedAmount = Number(amount);
-    if (!student || !selectedFile || !amount || !description.trim() || !date) {
+    if (!student || !amount || !feeStatus.trim() || !date) {
       toast({
         title: "Error",
-        description: "Please fill all fields and select a file",
+        description: "Please fill all payment fields.",
         variant: "destructive",
       });
       return;
@@ -136,20 +141,42 @@ const FeeStatement = () => {
     try {
       await uploadFeeRecord(student.id, {
         date,
-        description: description.trim(),
+        description: feeStatus.trim(),
         amount: parsedAmount,
-        type: recordType,
+        type: "payment",
       });
-
-      const formData = new FormData();
-      formData.append("file", selectedFile);
-      formData.append("type", "fee_statement");
-      await apiUploadRequest(`/students/${student.id}/documents`, formData);
 
       await refreshData();
 
+      setAmount("");
+      setFeeStatus("Fee Semester 1 cleared");
+      toast({ title: "Success", description: "Payment record saved successfully." });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to save payment record.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleFeeStructureUpload = async () => {
+    if (!student || !feeStructureFile) {
+      return;
+    }
+
+    setIsStructureUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", feeStructureFile);
+      formData.append("type", "fee_statement");
+      await apiUploadRequest(`/students/${student.id}/documents`, formData);
+      await refreshData();
+
       const response = await apiRequest<{
-        documents: Array<{ id: string; type: "result" | "fee_statement"; name: string; uploadedAt: string }>;
+        documents: Array<{ id: string; type: "result" | "fee_statement" | "school_id"; name: string; uploadedAt: string }>;
       }>(`/students/${student.id}/documents`);
       setDocuments(
         response.documents
@@ -157,19 +184,16 @@ const FeeStatement = () => {
           .map((doc) => ({ id: doc.id, name: doc.name, uploadedAt: doc.uploadedAt }))
       );
 
-      setSelectedFile(null);
-      setAmount("");
-      setDescription("Uploaded payment");
-      setRecordType("payment");
-      toast({ title: "Success", description: "Fee statement uploaded successfully" });
+      setFeeStructureFile(null);
+      toast({ title: "Success", description: "Fee structure uploaded successfully." });
     } catch (error) {
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to upload statement",
+        title: "Upload Failed",
+        description: error instanceof Error ? error.message : "Unable to upload fee structure.",
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setIsStructureUploading(false);
     }
   };
 
@@ -179,43 +203,33 @@ const FeeStatement = () => {
       <div className="container mx-auto px-4 pt-24 pb-16 flex-grow max-w-6xl">
         <div className="mb-8">
           <h1 className="font-display text-3xl font-bold">Fee Management</h1>
-          <p className="text-muted-foreground">Track and manage your tuition fees and payments</p>
+          <p className="text-muted-foreground">Record school payments and upload your fee structure document</p>
         </div>
 
-        {/* Balance Card */}
         <div className="grid md:grid-cols-3 gap-4 mb-6">
           <Card className="border-border/50 bg-gradient-to-br from-primary/10 to-primary/5">
             <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Outstanding Balance</p>
-                  <p className="font-display text-3xl font-bold text-primary">
-                    KES {balance.toLocaleString()}
-                  </p>
-                </div>
-                <DollarSign className="w-12 h-12 text-primary/20" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-border/50">
-            <CardContent className="p-6">
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Total Charges</p>
-                <p className="font-display text-2xl font-bold text-foreground">
-                  KES {totalCharges.toLocaleString()}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-border/50">
-            <CardContent className="p-6">
               <div>
                 <p className="text-sm text-muted-foreground mb-1">Total Paid</p>
-                <p className="font-display text-2xl font-bold text-green-600">
-                  KES {totalPayments.toLocaleString()}
-                </p>
+                <p className="font-display text-3xl font-bold text-primary">KES {totalPayments.toLocaleString()}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/50">
+            <CardContent className="p-6">
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Payment Records</p>
+                <p className="font-display text-2xl font-bold text-foreground">{feeRecords.length}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/50">
+            <CardContent className="p-6">
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Latest Payment Date</p>
+                <p className="font-display text-2xl font-bold text-green-600">{latestPaymentDate ? latestPaymentDate.toLocaleDateString() : "N/A"}</p>
               </div>
             </CardContent>
           </Card>
@@ -226,22 +240,10 @@ const FeeStatement = () => {
           <div className="md:col-span-1">
             <Card className="border-border/50">
               <CardHeader>
-                <CardTitle className="font-display text-lg">Upload Payment</CardTitle>
+                <CardTitle className="font-display text-lg">Record Payment</CardTitle>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleUpload} className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium block mb-1">Record Type</label>
-                    <select
-                      value={recordType}
-                      onChange={(e) => setRecordType(e.target.value as "payment" | "charge")}
-                      className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground"
-                    >
-                      <option value="payment">Payment</option>
-                      <option value="charge">Charge</option>
-                    </select>
-                  </div>
-
+                <form onSubmit={handlePaymentSubmit} className="space-y-4">
                   <div>
                     <label className="text-sm font-medium block mb-1">Payment Amount</label>
                     <Input
@@ -263,32 +265,15 @@ const FeeStatement = () => {
                   </div>
 
                   <div>
-                    <label className="text-sm font-medium block mb-1">Description</label>
-                    <Input
-                      type="text"
-                      placeholder="e.g., M-Pesa payment"
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium block mb-2">Receipt/Proof</label>
-                    <div className="border-2 border-dashed border-border/50 rounded-lg p-4 text-center cursor-pointer hover:border-primary/50 transition">
-                      <input
-                        type="file"
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        onChange={handleFileSelect}
-                        className="hidden"
-                        id="fee-file-input"
-                      />
-                      <label htmlFor="fee-file-input" className="cursor-pointer block">
-                        <Upload className="w-6 h-6 mx-auto mb-2 text-muted-foreground" />
-                        <p className="text-xs text-muted-foreground">
-                          {selectedFile ? selectedFile.name : "Click to upload"}
-                        </p>
-                      </label>
-                    </div>
+                    <label className="text-sm font-medium block mb-1">Fee Status</label>
+                    <select
+                      value={feeStatus}
+                      onChange={(e) => setFeeStatus(e.target.value)}
+                      className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground"
+                    >
+                      <option value="Fee Semester 1 cleared">Fee Semester 1 cleared</option>
+                      <option value="Fee Semester 2 cleared">Fee Semester 2 cleared</option>
+                    </select>
                   </div>
 
                   <Button
@@ -296,9 +281,37 @@ const FeeStatement = () => {
                     className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
                     disabled={isLoading}
                   >
-                    {isLoading ? "Uploading..." : "Submit Payment"}
+                    {isLoading ? "Saving..." : "Save Payment"}
                   </Button>
                 </form>
+
+                <div className="mt-6 pt-6 border-t border-border/50 space-y-3">
+                  <p className="text-sm font-medium">Upload Fee Structure</p>
+                  <div className="border-2 border-dashed border-border/50 rounded-lg p-4 text-center cursor-pointer hover:border-primary/50 transition">
+                    <input
+                      type="file"
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      onChange={handleFeeStructureFileSelect}
+                      className="hidden"
+                      id="fee-structure-input"
+                    />
+                    <label htmlFor="fee-structure-input" className="cursor-pointer block">
+                      <Upload className="w-6 h-6 mx-auto mb-2 text-muted-foreground" />
+                      <p className="text-xs text-muted-foreground">
+                        {feeStructureFile ? feeStructureFile.name : "Click to upload fee structure"}
+                      </p>
+                    </label>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={handleFeeStructureUpload}
+                    disabled={!feeStructureFile || isStructureUploading}
+                  >
+                    {isStructureUploading ? "Uploading..." : "Upload Fee Structure"}
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -348,7 +361,7 @@ const FeeStatement = () => {
                         <Badge
                           variant="outline"
                           className={
-                            record.status === "completed"
+                            record.type === "payment"
                               ? "bg-green-50 text-green-700"
                               : "bg-yellow-50 text-yellow-700"
                           }
@@ -362,7 +375,7 @@ const FeeStatement = () => {
 
                 {documents.length > 0 && (
                   <div className="mt-6 pt-4 border-t border-border/50">
-                    <h3 className="font-semibold mb-2">Uploaded Receipts</h3>
+                    <h3 className="font-semibold mb-2">Uploaded Fee Structures</h3>
                     <div className="space-y-2">
                       {documents.map((doc) => (
                         <div key={doc.id} className="text-sm text-muted-foreground flex justify-between">
@@ -376,7 +389,7 @@ const FeeStatement = () => {
 
                 <div className="mt-6 p-3 bg-blue-50 text-blue-800 rounded-lg text-sm flex gap-2">
                   <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                  <p>Submit payment proof (M-Pesa receipt, bank slip) within 24 hours of payment.</p>
+                  <p>Record only direct-to-school payments here, then upload the official fee structure separately.</p>
                 </div>
               </CardContent>
             </Card>
@@ -394,11 +407,11 @@ const FeeStatement = () => {
             <div className="space-y-4">
               <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
                 <span className="font-medium">Semester 1 Tuition</span>
-                <Badge>Due in 30 days</Badge>
+                <Badge variant={semesterOneCleared ? "default" : "outline"}>{semesterOneCleared ? "Cleared" : "Not cleared"}</Badge>
               </div>
               <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
                 <span className="font-medium">Semester 2 Tuition</span>
-                <Badge variant="outline">Not yet billed</Badge>
+                <Badge variant={semesterTwoCleared ? "default" : "outline"}>{semesterTwoCleared ? "Cleared" : "Not cleared"}</Badge>
               </div>
             </div>
           </CardContent>

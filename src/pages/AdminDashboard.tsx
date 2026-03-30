@@ -287,6 +287,8 @@ const AdminDashboard = () => {
     { id: "inquiries" as const, label: `Inquiries (${inquiries.filter((inquiry) => !inquiry.repliedAt).length})`, icon: Mail },
   ];
 
+  const selectedStudentResultDocuments = (selectedStudent?.documents || []).filter((doc) => doc.type === "result");
+
   // Student detail view
   if (selectedStudent) {
     return (
@@ -357,6 +359,32 @@ const AdminDashboard = () => {
                     </tbody>
                   </table>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Uploaded Results / Transcripts */}
+            <Card className="border-border/50">
+              <CardHeader><CardTitle className="font-display">Uploaded Results / Transcripts</CardTitle></CardHeader>
+              <CardContent>
+                {selectedStudentResultDocuments.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No transcript files uploaded yet.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {selectedStudentResultDocuments.map((doc) => (
+                      <div key={doc.id} className="p-3 border border-border/50 rounded-lg flex items-center justify-between gap-3">
+                        <div>
+                          <p className="font-medium text-foreground">{doc.name}</p>
+                          <p className="text-xs text-muted-foreground">Uploaded {new Date(doc.uploadedAt).toLocaleString()}</p>
+                        </div>
+                        <Button asChild variant="outline" size="sm">
+                          <a href={doc.url} target="_blank" rel="noreferrer" download>
+                            <Download className="w-4 h-4 mr-1" /> Download
+                          </a>
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -470,7 +498,7 @@ const AdminDashboard = () => {
                 </select>
                 <select className="border border-input bg-background rounded-md px-3 py-2 text-sm" value={filterYear} onChange={(e) => setFilterYear(e.target.value)}>
                   <option value="">All Years</option>
-                  {[1, 2, 3, 4, 5, 6].map((y) => <option key={y} value={y.toString()}>Year {y}</option>)}
+                  {[1, 2, 3, 4, 5].map((y) => <option key={y} value={y.toString()}>Year {y}</option>)}
                 </select>
                 <select className="border border-input bg-background rounded-md px-3 py-2 text-sm" value={filterFeeBalance} onChange={(e) => setFilterFeeBalance(e.target.value as "all" | "cleared" | "outstanding")}>
                   <option value="all">All Balances</option>
