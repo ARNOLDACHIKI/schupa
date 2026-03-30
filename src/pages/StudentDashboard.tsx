@@ -31,7 +31,9 @@ const StudentDashboard = () => {
   const [isSchoolIdVisible, setIsSchoolIdVisible] = useState(false);
 
   const student = students.find((s) => s.email === user?.email) || students[0];
-  const latestSchoolId = student?.documents?.find((doc) => doc.type === "school_id");
+  const latestSchoolId = student?.documents
+    ?.filter((doc) => doc.type === "school_id")
+    .sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime())[0];
 
   useEffect(() => {
     if (!student) {
@@ -59,6 +61,16 @@ const StudentDashboard = () => {
       return;
     }
 
+    if (file.size > 10 * 1024 * 1024) {
+      toast({
+        title: "Upload Failed",
+        description: "Profile photo must be smaller than 10MB.",
+        variant: "destructive",
+      });
+      event.target.value = "";
+      return;
+    }
+
     try {
       const photo = await uploadProfilePhoto(student.id, file);
       setProfileForm((prev) => ({ ...prev, photo }));
@@ -75,7 +87,16 @@ const StudentDashboard = () => {
   };
 
   const handleSchoolIdUpload = async () => {
-    if (!schoolIdFile) {
+    if (!student || !schoolIdFile) {
+      return;
+    }
+
+    if (schoolIdFile.size > 10 * 1024 * 1024) {
+      toast({
+        title: "Upload Failed",
+        description: "School ID file must be smaller than 10MB.",
+        variant: "destructive",
+      });
       return;
     }
 

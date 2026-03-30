@@ -14,7 +14,9 @@ const ProfileSettings = () => {
   const { toast } = useToast();
   const { user, students, isDataLoading, updateStudentProfile, uploadStudentDocument, uploadProfilePhoto, isAuthInitialized } = useAuth();
   const student = students.find((entry) => entry.email === user?.email) || students[0];
-  const latestSchoolId = student?.documents?.filter((doc) => doc.type === "school_id")[0];
+  const latestSchoolId = student?.documents
+    ?.filter((doc) => doc.type === "school_id")
+    .sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime())[0];
 
   const [form, setForm] = useState({
     photo: "",
@@ -60,6 +62,26 @@ const ProfileSettings = () => {
   if (user.role !== "student") {
     navigate("/admin");
     return null;
+  }
+
+  if (!student && !isDataLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="container mx-auto px-4 pt-24 pb-16 max-w-3xl">
+          <Card className="border-border/50">
+            <CardHeader>
+              <CardTitle className="font-display text-2xl">Profile Settings</CardTitle>
+              <CardDescription>Your student profile is not ready yet.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button variant="outline" onClick={() => navigate("/dashboard")}>Back to Dashboard</Button>
+            </CardContent>
+          </Card>
+        </div>
+        <Footer />
+      </div>
+    );
   }
 
   const handleSave = async () => {
