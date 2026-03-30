@@ -157,15 +157,39 @@ const StudentDashboard = () => {
   }
 
   const handleProfileSave = async () => {
+    if (profileForm.course.trim().length < 2) {
+      toast({ title: "Invalid Course", description: "Course must be at least 2 characters.", variant: "destructive" });
+      return;
+    }
+
+    if (profileForm.institution.trim().length < 2) {
+      toast({ title: "Invalid Institution", description: "Institution must be at least 2 characters.", variant: "destructive" });
+      return;
+    }
+
+    const yearJoined = Number(profileForm.yearJoined);
+    const currentYear = Number(profileForm.currentYear);
+    const totalYears = Number(profileForm.totalYears);
+
+    if (!Number.isInteger(yearJoined) || !Number.isInteger(currentYear) || !Number.isInteger(totalYears)) {
+      toast({ title: "Invalid Academic Years", description: "Year fields must be valid whole numbers.", variant: "destructive" });
+      return;
+    }
+
+    if (currentYear > totalYears) {
+      toast({ title: "Invalid Academic Years", description: "Current year cannot exceed total years.", variant: "destructive" });
+      return;
+    }
+
     try {
       await updateStudentProfile(student.id, {
         photo: profileForm.photo,
         bio: profileForm.bio,
         course: profileForm.course.trim(),
         institution: profileForm.institution.trim(),
-        yearJoined: Number(profileForm.yearJoined),
-        currentYear: Number(profileForm.currentYear),
-        totalYears: Number(profileForm.totalYears),
+        yearJoined,
+        currentYear,
+        totalYears,
       });
       toast({ title: "Profile Updated", description: "Your details have been saved." });
     } catch (error) {

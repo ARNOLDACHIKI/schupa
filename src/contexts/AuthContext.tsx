@@ -34,6 +34,7 @@ interface AuthContextType {
   uploadStudentDocument: (studentId: string, type: "result" | "fee_statement" | "school_id", file: File) => Promise<void>;
   uploadProfilePhoto: (studentId: string, file: File) => Promise<string>;
   updateStudentProfile: (studentId: string, payload: { photo?: string; bio?: string; course: string; institution: string; yearJoined: number; currentYear: number; totalYears: number }) => Promise<void>;
+  deleteStudent: (studentId: string) => Promise<void>;
   submitContactMessage: (payload: { name: string; email: string; message: string }) => Promise<void>;
   refreshData: () => Promise<void>;
 }
@@ -258,6 +259,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await refreshData();
   }, [refreshData]);
 
+  const deleteStudent = useCallback(async (studentId: string) => {
+    await apiRequest<{ message: string }>(`/students/${studentId}`, {
+      method: "DELETE",
+    });
+    await refreshData();
+  }, [refreshData]);
+
   const submitContactMessage = useCallback(async (payload: { name: string; email: string; message: string }) => {
     await apiRequest<{ message: string }>("/contact", { method: "POST", body: payload, token: null });
   }, []);
@@ -286,6 +294,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         uploadStudentDocument,
         uploadProfilePhoto,
         updateStudentProfile,
+        deleteStudent,
         submitContactMessage,
         refreshData,
       }}

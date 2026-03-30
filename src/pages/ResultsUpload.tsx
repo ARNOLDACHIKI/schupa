@@ -79,6 +79,11 @@ const ResultsUpload = () => {
     return null;
   }
 
+  if (user.role !== "student") {
+    navigate("/admin");
+    return null;
+  }
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -93,8 +98,21 @@ const ResultsUpload = () => {
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    const parsedYear = parseInt(year, 10);
+    const parsedGpa = parseFloat(gpa);
+
     if (!student || !selectedFile || !semester || !gpa) {
       toast({ title: "Error", description: "Please fill all fields and select a file", variant: "destructive" });
+      return;
+    }
+
+    if (!Number.isFinite(parsedYear) || parsedYear < 1) {
+      toast({ title: "Error", description: "Enter a valid year.", variant: "destructive" });
+      return;
+    }
+
+    if (!Number.isFinite(parsedGpa) || parsedGpa < 0 || parsedGpa > 5) {
+      toast({ title: "Error", description: "GPA must be between 0 and 5.", variant: "destructive" });
       return;
     }
 
@@ -102,8 +120,8 @@ const ResultsUpload = () => {
     try {
       await uploadResult(student.id, {
         semester,
-        year: parseInt(year, 10),
-        gpa: parseFloat(gpa),
+        year: parsedYear,
+        gpa: parsedGpa,
       });
 
       const formData = new FormData();
@@ -121,7 +139,11 @@ const ResultsUpload = () => {
       setGpa("");
       toast({ title: "Success", description: "Results uploaded successfully" });
     } catch (error) {
-      toast({ title: "Error", description: "Failed to upload results", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to upload results",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -166,7 +188,7 @@ const ResultsUpload = () => {
                       type="number"
                       step="0.01"
                       min="0"
-                      max="4.0"
+                      max="5.0"
                       placeholder="e.g., 3.8"
                       value={gpa}
                       onChange={(e) => setGpa(e.target.value)}

@@ -26,7 +26,9 @@ const FeeStatement = () => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [description, setDescription] = useState("Uploaded payment");
   const [amount, setAmount] = useState("");
+  const [recordType, setRecordType] = useState<"payment" | "charge">("payment");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
 
   const [documents, setDocuments] = useState<Array<{ id: string; name: string; uploadedAt: string }>>([]);
@@ -88,6 +90,11 @@ const FeeStatement = () => {
     return null;
   }
 
+  if (user.role !== "student") {
+    navigate("/admin");
+    return null;
+  }
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -106,10 +113,20 @@ const FeeStatement = () => {
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!student || !selectedFile || !amount) {
+    const parsedAmount = Number(amount);
+    if (!student || !selectedFile || !amount || !description.trim() || !date) {
       toast({
         title: "Error",
         description: "Please fill all fields and select a file",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+      toast({
+        title: "Invalid amount",
+        description: "Amount must be greater than 0.",
         variant: "destructive",
       });
       return;
@@ -119,9 +136,9 @@ const FeeStatement = () => {
     try {
       await uploadFeeRecord(student.id, {
         date,
-        description: "Uploaded payment",
-        amount: Number(amount),
-        type: "payment",
+        description: description.trim(),
+        amount: parsedAmount,
+        type: recordType,
       });
 
       const formData = new FormData();
@@ -142,11 +159,13 @@ const FeeStatement = () => {
 
       setSelectedFile(null);
       setAmount("");
+      setDescription("Uploaded payment");
+      setRecordType("payment");
       toast({ title: "Success", description: "Fee statement uploaded successfully" });
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to upload statement",
+        description: error instanceof Error ? error.message : "Failed to upload statement",
         variant: "destructive",
       });
     } finally {
@@ -212,6 +231,18 @@ const FeeStatement = () => {
               <CardContent>
                 <form onSubmit={handleUpload} className="space-y-4">
                   <div>
+                    <label className="text-sm font-medium block mb-1">Record Type</label>
+                    <select
+                      value={recordType}
+                      onChange={(e) => setRecordType(e.target.value as "payment" | "charge")}
+                      className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground"
+                    >
+                      <option value="payment">Payment</option>
+                      <option value="charge">Charge</option>
+                    </select>
+                  </div>
+
+                  <div>
                     <label className="text-sm font-medium block mb-1">Payment Amount</label>
                     <Input
                       type="number"
@@ -228,6 +259,16 @@ const FeeStatement = () => {
                       type="date"
                       value={date}
                       onChange={(e) => setDate(e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium block mb-1">Description</label>
+                    <Input
+                      type="text"
+                      placeholder="e.g., M-Pesa payment"
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
                     />
                   </div>
 

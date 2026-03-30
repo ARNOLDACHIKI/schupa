@@ -11,7 +11,7 @@ import Navbar from "@/components/Navbar";
 import { type Student } from "@/data/mockData";
 
 const AdminStudentManagement = () => {
-  const { user, students, isAuthInitialized } = useAuth();
+  const { user, students, deleteStudent, isAuthInitialized } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
@@ -47,9 +47,18 @@ const AdminStudentManagement = () => {
       return a.approved === b.approved ? 0 : a.approved ? -1 : 1;
     });
 
-  const handleDeleteStudent = (studentId: string) => {
+  const handleDeleteStudent = async (studentId: string) => {
     if (window.confirm("Are you sure you want to delete this student? This action cannot be undone.")) {
-      toast({ title: "Student deleted", description: "The student has been permanently removed.", variant: "destructive" });
+      try {
+        await deleteStudent(studentId);
+        toast({ title: "Student deleted", description: "The student has been permanently removed.", variant: "destructive" });
+      } catch (error) {
+        toast({
+          title: "Delete failed",
+          description: error instanceof Error ? error.message : "Unable to delete student right now.",
+          variant: "destructive",
+        });
+      }
     }
   };
 

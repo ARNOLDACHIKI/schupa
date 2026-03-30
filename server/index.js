@@ -787,6 +787,34 @@ app.get(
   })
 );
 
+app.delete(
+  "/api/students/:id",
+  authRequired,
+  adminRequired,
+  asyncHandler(async (req, res) => {
+    const profile = await prisma.studentProfile.findUnique({
+      where: { id: req.params.id },
+      include: { user: true },
+    });
+
+    if (!profile || profile.user.role !== UserRole.STUDENT) {
+      return res.status(404).json({ message: "Student not found." });
+    }
+
+    await prisma.user.delete({ where: { id: profile.userId } });
+
+    await logAudit({
+      actorId: req.user.id,
+      action: "admin.student.delete",
+      entity: "student_profile",
+      entityId: profile.id,
+      metadata: { studentUserId: profile.userId, studentEmail: profile.user.email },
+    });
+
+    return res.json({ message: "Student removed from the system." });
+  })
+);
+
 app.post(
   "/api/students/:id/results",
   authRequired,
@@ -794,9 +822,9 @@ app.post(
   asyncHandler(async (req, res) => {
     const body = z
       .object({
-        semester: z.string().min(2),
-        year: z.number().int().min(1),
-        gpa: z.number().min(0).max(4),
+        semester: z.string().trim().min(2, "Semester is required."),
+        year: z.coerce.number().int().min(1, "Year must be a positive number."),
+        gpa: z.coerce.number().min(0, "GPA must be at least 0.").max(5, "GPA cannot exceed 5.0."),
       })
       .parse(req.body);
 
@@ -840,12 +868,17 @@ app.post(
   asyncHandler(async (req, res) => {
     const body = z
       .object({
-        date: z.string().min(8),
-        description: z.string().min(3),
-        amount: z.number().positive(),
+        date: z.string().trim().min(8, "Payment date is required."),
+        description: z.string().trim().min(3, "Description must be at least 3 characters."),
+        amount: z.coerce.number().positive("Amount must be greater than 0."),
         type: z.enum(["payment", "charge"]),
       })
       .parse(req.body);
+
+    const parsedDate = new Date(body.date);
+    if (Number.isNaN(parsedDate.getTime())) {
+      return res.status(400).json({ message: "Invalid payment date." });
+    }
 
     const profile = await prisma.studentProfile.findUnique({ where: { id: req.params.id } });
     if (!profile) {
@@ -855,7 +888,7 @@ app.post(
     const created = await prisma.feeRecord.create({
       data: {
         studentId: profile.id,
-        date: new Date(body.date),
+        date: parsedDate,
         description: body.description,
         amount: body.amount,
         type: body.type === "payment" ? FeeType.PAYMENT : FeeType.CHARGE,
@@ -890,11 +923,11 @@ app.patch(
       .object({
         photo: z.string().trim().max(2048).optional(),
         bio: z.string().trim().max(1000).optional(),
-        course: z.string().min(2),
-        institution: z.string().min(2),
-        yearJoined: z.number().int().min(1990).max(2100),
-        currentYear: z.number().int().min(1).max(15),
-        totalYears: z.number().int().min(1).max(15),
+        course: z.string().trim().min(2, "Course must be at least 2 characters."),
+        institution: z.string().trim().min(2, "Institution must be at least 2 characters."),
+        yearJoined: z.coerce.number().int().min(1990).max(2100),
+        currentYear: z.coerce.number().int().min(1).max(15),
+        totalYears: z.coerce.number().int().min(1).max(15),
       })
       .parse(req.body);
 
@@ -1572,9 +1605,9 @@ app.post(
   asyncHandler(async (req, res) => {
     const body = z
       .object({
-        name: z.string().min(2),
+        name: z.string().trim().min(2),
         email: z.string().email(),
-        message: z.string().min(5),
+        message: z.string().trim().min(2, "Message must contain at least 2 characters."),
       })
       .parse(req.body);
 

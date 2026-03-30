@@ -67,15 +67,39 @@ const ProfileSettings = () => {
       return;
     }
 
+    if (form.course.trim().length < 2) {
+      toast({ title: "Invalid Course", description: "Course must be at least 2 characters.", variant: "destructive" });
+      return;
+    }
+
+    if (form.institution.trim().length < 2) {
+      toast({ title: "Invalid Institution", description: "Institution must be at least 2 characters.", variant: "destructive" });
+      return;
+    }
+
+    const yearJoined = Number(form.yearJoined);
+    const currentYear = Number(form.currentYear);
+    const totalYears = Number(form.totalYears);
+
+    if (!Number.isInteger(yearJoined) || !Number.isInteger(currentYear) || !Number.isInteger(totalYears)) {
+      toast({ title: "Invalid Academic Years", description: "Year fields must be valid whole numbers.", variant: "destructive" });
+      return;
+    }
+
+    if (currentYear > totalYears) {
+      toast({ title: "Invalid Academic Years", description: "Current year cannot exceed total years.", variant: "destructive" });
+      return;
+    }
+
     try {
       await updateStudentProfile(student.id, {
         photo: form.photo,
         bio: form.bio,
         course: form.course.trim(),
         institution: form.institution.trim(),
-        yearJoined: Number(form.yearJoined),
-        currentYear: Number(form.currentYear),
-        totalYears: Number(form.totalYears),
+        yearJoined,
+        currentYear,
+        totalYears,
       });
       toast({ title: "Profile Saved", description: "Your profile settings were updated." });
     } catch (error) {
@@ -114,6 +138,11 @@ const ProfileSettings = () => {
 
   const handleSchoolIdUpload = async () => {
     if (!student || !schoolIdFile) {
+      return;
+    }
+
+    if (schoolIdFile.size > 10 * 1024 * 1024) {
+      toast({ title: "Upload Failed", description: "School ID file must be smaller than 10MB.", variant: "destructive" });
       return;
     }
 

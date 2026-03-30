@@ -49,11 +49,24 @@ const Index = () => {
   const handleContact = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (contactForm.message.trim().length < 2) {
+      toast({
+        title: "Send failed",
+        description: "Message must contain at least 2 characters.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSendingContact(true);
     try {
       await apiRequest<{ message: string }>("/contact", {
         method: "POST",
-        body: contactForm,
+        body: {
+          name: contactForm.name.trim(),
+          email: contactForm.email.trim(),
+          message: contactForm.message.trim(),
+        },
         token: null,
       });
       toast({ title: "Message Sent!", description: "We received your inquiry and will respond shortly." });
@@ -467,7 +480,7 @@ const Index = () => {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-foreground mb-1 block">Message</label>
-                  <Textarea placeholder="How can we help?" rows={5} value={contactForm.message} onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })} required />
+                  <Textarea placeholder="How can we help?" rows={5} minLength={2} value={contactForm.message} onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })} required />
                 </div>
                 <Button type="submit" className="w-full bg-accent text-accent-foreground hover:bg-accent/90" disabled={isSendingContact}>
                   <Send className="w-4 h-4 mr-2" /> {isSendingContact ? "Sending..." : "Send Message"}
