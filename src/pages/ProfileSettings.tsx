@@ -10,6 +10,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 
 const ProfileSettings = () => {
+      const feeStatementDocuments = student?.documents
+        ?.filter((doc) => doc.type === "fee_statement")
+        .sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()) || [];
     // --- State Hooks ---
     const [form, setForm] = useState({
       photo: "",
