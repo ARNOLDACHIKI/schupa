@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/api";
 import { Search, Eye, Trash2, Download } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { type Student } from "@/data/mockData";
@@ -16,7 +17,9 @@ const AdminStudentManagement = () => {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState<"name" | "email" | "status">("name");
-  const [filterStatus, setFilterStatus] = useState<"all" | "approved" | "pending">("all");
+  const [filterStatus, setFilterStatus] = useState<"all" | "approved" | "pending" | "completed">("all");
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
 
   if (!isAuthInitialized) {
     return (
@@ -27,8 +30,7 @@ const AdminStudentManagement = () => {
   }
 
   if (!user || user.role !== "admin") {
-    navigate("/signin");
-    return null;
+    return <Navigate to="/signin" replace />;
   }
 
   const filteredStudents = students
@@ -38,7 +40,8 @@ const AdminStudentManagement = () => {
       const matchesStatus =
         filterStatus === "all" ||
         (filterStatus === "approved" && s.approved) ||
-        (filterStatus === "pending" && !s.approved);
+        (filterStatus === "pending" && !s.approved) ||
+        (filterStatus === "completed" && s.currentYear >= s.totalYears);
       return matchesSearch && matchesStatus;
     })
     .sort((a, b) => {
@@ -79,8 +82,21 @@ const AdminStudentManagement = () => {
     window.open(latestResultDoc.url, "_blank", "noopener,noreferrer");
   };
 
-  const handleViewDetails = (studentId: string) => {
-    toast({ title: "Feature coming soon", description: "Detailed student view will be available soon." });
+  const handleViewDetails = async (studentId: string) => {
+    setIsLoadingDetails(true);
+    try {
+      const response = await apiRequest<{ student: Student }>(`/students/${studentId}`);
+      setSelectedStudent(response.student);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (error) {
+      toast({
+        title: "Student not found",
+        description: error instanceof Error ? error.message : "Could not load that student profile.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingDetails(false);
+    }
   };
 
   const stats = {
@@ -94,10 +110,38 @@ const AdminStudentManagement = () => {
       <Navbar />
 
       <div className="pt-20 p-4 md:p-8 max-w-7xl mx-auto">
-        <div className="mb-8">
+        <div className="mb-8 flex flex-wrap items-start justify-between gap-3">
+          <div>
           <h1 className="font-display text-3xl font-bold mb-2">Student Management</h1>
           <p className="text-muted-foreground">Manage all registered students and their profiles</p>
+          </div>
+          <Button variant="outline" onClick={() => navigate("/admin")}>Back to Dashboard</Button>
         </div>
+
+        {selectedStudent ? (
+          <Card className="border-border/50 mb-6">
+            <CardHeader>
+              <CardTitle className="font-display text-lg">Student Profile: {selectedStudent.name}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <p><span className="font-medium">Email:</span> {selectedStudent.email}</p>
+              <p><span className="font-medium">Course:</span> {selectedStudent.course}</p>
+              <p><span className="font-medium">Institution:</span> {selectedStudent.institution}</p>
+              <p><span className="font-medium">Academic Year:</span> {selectedStudent.currentYear} of {selectedStudent.totalYears}</p>
+              <p><span className="font-medium">Fee Balance:</span> KES {selectedStudent.feeBalance.toLocaleString()}</p>
+              <div className="flex flex-wrap gap-3 pt-2">
+                <Button variant="outline" onClick={() => handleDownloadLatestTranscript(selectedStudent)}>
+                  <Download className="w-4 h-4 mr-2" /> Download Latest Transcript
+                </Button>
+                <Button variant="ghost" onClick={() => setSelectedStudent(null)}>
+                  Close Profile
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ) : null}
+
+        {isLoadingDetails ? <p className="text-sm text-muted-foreground mb-6">Loading student profile...</p> : null}
 
         {/* Stats */}
         <div className="grid md:grid-cols-3 gap-4 mb-8">
@@ -148,6 +192,7 @@ const AdminStudentManagement = () => {
                   <option value="all">All Students</option>
                   <option value="approved">Approved</option>
                   <option value="pending">Pending</option>
+                  <option value="completed">Completed Campus</option>
                 </select>
               </div>
 

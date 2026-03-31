@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,8 +38,7 @@ const Messages = () => {
   }
 
   if (!user) {
-    navigate("/signin");
-    return null;
+    return <Navigate to="/signin" replace />;
   }
 
   const [recipients, setRecipients] = useState<Array<{ id: string; name: string }>>([]);
@@ -129,6 +128,19 @@ const Messages = () => {
     }
   };
 
+  const handleMarkAsRead = async (messageId: string) => {
+    try {
+      await apiRequest<{ message: string }>(`/messages/${messageId}/read`, { method: "PATCH" });
+      setMessages((prev) => prev.map((msg) => (msg.id === messageId ? { ...msg, read: true } : msg)));
+    } catch (error) {
+      toast({
+        title: "Could not mark as read",
+        description: error instanceof Error ? error.message : "Unable to update message state.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
@@ -187,7 +199,20 @@ const Messages = () => {
                 <div key={message.id} className="border border-border/50 rounded-lg p-3">
                   <div className="flex justify-between gap-3 mb-1">
                     <p className="font-semibold text-sm">{message.subject}</p>
-                    <p className="text-xs text-muted-foreground">{new Date(message.createdAt).toLocaleString()}</p>
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground">{new Date(message.createdAt).toLocaleString()}</p>
+                      {!message.read && message.to.id === user.id ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-auto p-0 text-xs text-primary"
+                          onClick={() => handleMarkAsRead(message.id)}
+                        >
+                          Mark as read
+                        </Button>
+                      ) : null}
+                    </div>
                   </div>
                   <p className="text-xs text-muted-foreground mb-2">
                     From {message.from.name} to {message.to.name}

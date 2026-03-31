@@ -1,6 +1,6 @@
 import { useEffect, useState, type ChangeEvent } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -27,13 +27,21 @@ const StudentDashboard = () => {
     currentYear: "",
     totalYears: "",
   });
-  const [schoolIdFile, setSchoolIdFile] = useState<File | null>(null);
+  const [photoChanged, setPhotoChanged] = useState(false);
+  const [schoolIdFrontFile, setSchoolIdFrontFile] = useState<File | null>(null);
+  const [schoolIdBackFile, setSchoolIdBackFile] = useState<File | null>(null);
   const [isSchoolIdVisible, setIsSchoolIdVisible] = useState(false);
 
   const student = students.find((s) => s.email === user?.email) || students[0];
-  const latestSchoolId = student?.documents
+  const schoolIdDocuments = student?.documents
     ?.filter((doc) => doc.type === "school_id")
-    .sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime())[0];
+    .sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()) || [];
+
+  const latestSchoolIdFront = schoolIdDocuments.find((doc) => doc.name.toLowerCase().includes("front"));
+  const latestSchoolIdBack = schoolIdDocuments.find((doc) => doc.name.toLowerCase().includes("back"));
+  const latestSchoolIdGeneric = schoolIdDocuments.find(
+    (doc) => !doc.name.toLowerCase().includes("front") && !doc.name.toLowerCase().includes("back")
+  );
 
   useEffect(() => {
     if (!student) {
@@ -49,6 +57,7 @@ const StudentDashboard = () => {
       currentYear: String(student.currentYear),
       totalYears: String(student.totalYears),
     });
+    setPhotoChanged(false);
   }, [student]);
 
   const handlePhotoUpload = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -58,6 +67,16 @@ const StudentDashboard = () => {
 
     const file = event.target.files?.[0];
     if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      toast({
+        title: "Upload Failed",
+        description: "Please select an image file for your profile photo.",
+        variant: "destructive",
+      });
+      event.target.value = "";
       return;
     }
 
@@ -74,6 +93,7 @@ const StudentDashboard = () => {
     try {
       const photo = await uploadProfilePhoto(student.id, file);
       setProfileForm((prev) => ({ ...prev, photo }));
+      setPhotoChanged(true);
       toast({ title: "Photo Updated", description: "Your profile photo has been updated successfully." });
     } catch (error) {
       toast({
@@ -86,12 +106,23 @@ const StudentDashboard = () => {
     }
   };
 
-  const handleSchoolIdUpload = async () => {
-    if (!student || !schoolIdFile) {
+  const handleSchoolIdUpload = async (side: "front" | "back") => {
+    const selectedFile = side === "front" ? schoolIdFrontFile : schoolIdBackFile;
+
+    if (!student || !selectedFile) {
       return;
     }
 
-    if (schoolIdFile.size > 10 * 1024 * 1024) {
+    if (!selectedFile.type.startsWith("image/") && selectedFile.type !== "application/pdf") {
+      toast({
+        title: "Upload Failed",
+        description: "School ID must be a PDF or image file.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (selectedFile.size > 10 * 1024 * 1024) {
       toast({
         title: "Upload Failed",
         description: "School ID file must be smaller than 10MB.",
@@ -101,9 +132,22 @@ const StudentDashboard = () => {
     }
 
     try {
-      await uploadStudentDocument(student.id, "school_id", schoolIdFile);
-      setSchoolIdFile(null);
-      toast({ title: "School ID Uploaded", description: "Your school ID has been uploaded successfully." });
+      const renamedFile = new File([selectedFile], `school-id-${side}-${Date.now()}-${selectedFile.name}`, {
+        type: selectedFile.type,
+      });
+
+      await uploadStudentDocument(student.id, "school_id", renamedFile);
+
+      if (side === "front") {
+        setSchoolIdFrontFile(null);
+      } else {
+        setSchoolIdBackFile(null);
+      }
+
+      toast({
+        title: "School ID Uploaded",
+        description: `School ID ${side} side has been uploaded successfully.`,
+      });
     } catch (error) {
       toast({
         title: "Upload Failed",
@@ -157,8 +201,7 @@ const StudentDashboard = () => {
   }
 
   if (!user) {
-    navigate("/signin");
-    return null;
+    return <Navigate to="/signin" replace />;
   }
 
   if (isDataLoading && !student) {
@@ -546,23 +589,49 @@ const StudentDashboard = () => {
                   <CardTitle className="font-display text-lg">School ID</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <Input type="file" accept=".pdf,image/*" onChange={(e) => setSchoolIdFile(e.target.files?.[0] || null)} />
+                  <div className="grid md:grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-foreground">Front Side</label>
+                      <Input type="file" accept=".pdf,image/*" onChange={(e) => setSchoolIdFrontFile(e.target.files?.[0] || null)} />
+                      <Button variant="outline" onClick={() => handleSchoolIdUpload("front")} disabled={!schoolIdFrontFile}>
+                        <Upload className="w-4 h-4 mr-2" /> Upload Front
+                      </Button>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-foreground">Back Side</label>
+                      <Input type="file" accept=".pdf,image/*" onChange={(e) => setSchoolIdBackFile(e.target.files?.[0] || null)} />
+                      <Button variant="outline" onClick={() => handleSchoolIdUpload("back")} disabled={!schoolIdBackFile}>
+                        <Upload className="w-4 h-4 mr-2" /> Upload Back
+                      </Button>
+                    </div>
+                  </div>
                   <div className="flex flex-wrap gap-3">
-                    <Button variant="outline" onClick={handleSchoolIdUpload} disabled={!schoolIdFile}>
-                      <Upload className="w-4 h-4 mr-2" /> Upload School ID
-                    </Button>
-                    {latestSchoolId ? (
+                    {(latestSchoolIdFront || latestSchoolIdBack || latestSchoolIdGeneric) ? (
                       <Button variant="ghost" onClick={() => setIsSchoolIdVisible((prev) => !prev)}>
                         {isSchoolIdVisible ? <EyeOff className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
                         {isSchoolIdVisible ? "Hide School ID" : "Show School ID"}
                       </Button>
                     ) : null}
                   </div>
-                  {latestSchoolId ? (
+                  {(latestSchoolIdFront || latestSchoolIdBack || latestSchoolIdGeneric) ? (
                     isSchoolIdVisible ? (
-                      <a href={latestSchoolId.url} target="_blank" rel="noreferrer" className="text-sm text-primary underline-offset-4 hover:underline">
-                        {latestSchoolId.name}
-                      </a>
+                      <div className="space-y-2 text-sm">
+                        {latestSchoolIdFront ? (
+                          <a href={latestSchoolIdFront.url} target="_blank" rel="noreferrer" className="block text-primary underline-offset-4 hover:underline">
+                            View Front: {latestSchoolIdFront.name}
+                          </a>
+                        ) : null}
+                        {latestSchoolIdBack ? (
+                          <a href={latestSchoolIdBack.url} target="_blank" rel="noreferrer" className="block text-primary underline-offset-4 hover:underline">
+                            View Back: {latestSchoolIdBack.name}
+                          </a>
+                        ) : null}
+                        {!latestSchoolIdFront && !latestSchoolIdBack && latestSchoolIdGeneric ? (
+                          <a href={latestSchoolIdGeneric.url} target="_blank" rel="noreferrer" className="block text-primary underline-offset-4 hover:underline">
+                            {latestSchoolIdGeneric.name}
+                          </a>
+                        ) : null}
+                      </div>
                     ) : (
                       <p className="text-sm text-muted-foreground">School ID uploaded and currently hidden.</p>
                     )

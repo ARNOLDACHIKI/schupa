@@ -940,17 +940,23 @@ app.patch(
       return res.status(404).json({ message: "Student not found." });
     }
 
+    // Only update photo if a non-empty value is provided
+    const updateData = {
+      bio: body.bio,
+      course: body.course,
+      institution: body.institution,
+      yearJoined: body.yearJoined,
+      currentYear: body.currentYear,
+      totalYears: body.totalYears,
+    };
+    
+    if (body.photo) {
+      updateData.photo = body.photo;
+    }
+
     await prisma.studentProfile.update({
       where: { id: profile.id },
-      data: {
-        photo: body.photo,
-        bio: body.bio,
-        course: body.course,
-        institution: body.institution,
-        yearJoined: body.yearJoined,
-        currentYear: body.currentYear,
-        totalYears: body.totalYears,
-      },
+      data: updateData,
     });
 
     return res.json({ message: "Profile updated." });

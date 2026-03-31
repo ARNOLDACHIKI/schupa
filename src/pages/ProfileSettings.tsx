@@ -1,5 +1,5 @@
 import { useEffect, useState, type ChangeEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,9 +14,15 @@ const ProfileSettings = () => {
   const { toast } = useToast();
   const { user, students, isDataLoading, updateStudentProfile, uploadStudentDocument, uploadProfilePhoto, isAuthInitialized } = useAuth();
   const student = students.find((entry) => entry.email === user?.email) || students[0];
-  const latestSchoolId = student?.documents
+  const schoolIdDocuments = student?.documents
     ?.filter((doc) => doc.type === "school_id")
-    .sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime())[0];
+    .sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()) || [];
+
+  const latestSchoolIdFront = schoolIdDocuments.find((doc) => doc.name.toLowerCase().includes("front"));
+  const latestSchoolIdBack = schoolIdDocuments.find((doc) => doc.name.toLowerCase().includes("back"));
+  const latestSchoolIdGeneric = schoolIdDocuments.find(
+    (doc) => !doc.name.toLowerCase().includes("front") && !doc.name.toLowerCase().includes("back")
+  );
 
   const [form, setForm] = useState({
     photo: "",
@@ -27,8 +33,46 @@ const ProfileSettings = () => {
     currentYear: "",
     totalYears: "",
   });
-  const [schoolIdFile, setSchoolIdFile] = useState<File | null>(null);
+  const [photoChanged, setPhotoChanged] = useState(false);
+  const [schoolIdFrontFile, setSchoolIdFrontFile] = useState<File | null>(null);
+  const [schoolIdBackFile, setSchoolIdBackFile] = useState<File | null>(null);
   const [isSchoolIdVisible, setIsSchoolIdVisible] = useState(false);
+  // Fee Statement state
+  const [feeStatementFile, setFeeStatementFile] = useState<File | null>(null);
+  const [isFeeStatementVisible, setIsFeeStatementVisible] = useState(false);
+
+  // Find latest uploaded fee statement document
+  const feeStatementDocuments = student?.documents
+    ?.filter((doc) => doc.type === "fee_statement")
+    .sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()) || [];
+  const latestFeeStatement = feeStatementDocuments[0];
+  const handleFeeStatementUpload = async () => {
+    if (!student || !feeStatementFile) {
+      return;
+    }
+    if (!feeStatementFile.type.startsWith("image/") && feeStatementFile.type !== "application/pdf") {
+      toast({ title: "Upload Failed", description: "Fee statement must be a PDF or image file.", variant: "destructive" });
+      return;
+    }
+    if (feeStatementFile.size > 10 * 1024 * 1024) {
+      toast({ title: "Upload Failed", description: "Fee statement file must be smaller than 10MB.", variant: "destructive" });
+      return;
+    }
+    try {
+      const renamedFile = new File([feeStatementFile], `fee-statement-${Date.now()}-${feeStatementFile.name}`, {
+        type: feeStatementFile.type,
+      });
+      await uploadStudentDocument(student.id, "fee_statement", renamedFile);
+      setFeeStatementFile(null);
+      toast({ title: "Fee Statement Uploaded", description: "Your fee statement is now on file." });
+    } catch (error) {
+      toast({
+        title: "Upload Failed",
+        description: error instanceof Error ? error.message : "Unable to upload fee statement.",
+        variant: "destructive",
+      });
+    }
+  };
 
   useEffect(() => {
     if (!student) {
@@ -44,6 +88,7 @@ const ProfileSettings = () => {
       currentYear: String(student.currentYear),
       totalYears: String(student.totalYears),
     });
+    setPhotoChanged(false);
   }, [student]);
 
   if (!isAuthInitialized) {
@@ -55,13 +100,11 @@ const ProfileSettings = () => {
   }
 
   if (!user) {
-    navigate("/signin");
-    return null;
+    return <Navigate to="/signin" replace />;
   }
 
   if (user.role !== "student") {
-    navigate("/admin");
-    return null;
+    return <Navigate to="/admin" replace />;
   }
 
   if (!student && !isDataLoading) {
@@ -119,15 +162,30 @@ const ProfileSettings = () => {
     }
 
     try {
-      await updateStudentProfile(student.id, {
-        photo: form.photo,
+      const updatePayload: {
+        photo?: string;
+        bio?: string;
+        course: string;
+        institution: string;
+        yearJoined: number;
+        currentYear: number;
+        totalYears: number;
+      } = {
         bio: form.bio,
         course: form.course.trim(),
         institution: form.institution.trim(),
         yearJoined,
         currentYear,
         totalYears,
-      });
+      };
+      
+      // Only include photo in update if it has been changed
+      if (photoChanged && form.photo) {
+        updatePayload.photo = form.photo;
+      }
+      
+      await updateStudentProfile(student.id, updatePayload);
+      setPhotoChanged(false);
       toast({ title: "Profile Saved", description: "Your profile settings were updated." });
     } catch (error) {
       toast({
@@ -171,6 +229,7 @@ const ProfileSettings = () => {
     try {
       const photo = await uploadProfilePhoto(student.id, file);
       setForm((prev) => ({ ...prev, photo }));
+      setPhotoChanged(true);
       toast({ title: "Photo Uploaded", description: "Your profile photo has been uploaded." });
     } catch (error) {
       toast({
@@ -183,20 +242,36 @@ const ProfileSettings = () => {
     }
   };
 
-  const handleSchoolIdUpload = async () => {
-    if (!student || !schoolIdFile) {
+  const handleSchoolIdUpload = async (side: "front" | "back") => {
+    const selectedFile = side === "front" ? schoolIdFrontFile : schoolIdBackFile;
+
+    if (!student || !selectedFile) {
       return;
     }
 
-    if (schoolIdFile.size > 10 * 1024 * 1024) {
+    if (!selectedFile.type.startsWith("image/") && selectedFile.type !== "application/pdf") {
+      toast({ title: "Upload Failed", description: "School ID must be a PDF or image file.", variant: "destructive" });
+      return;
+    }
+
+    if (selectedFile.size > 10 * 1024 * 1024) {
       toast({ title: "Upload Failed", description: "School ID file must be smaller than 10MB.", variant: "destructive" });
       return;
     }
 
     try {
-      await uploadStudentDocument(student.id, "school_id", schoolIdFile);
-      setSchoolIdFile(null);
-      toast({ title: "School ID Uploaded", description: "Your school ID document is now on file." });
+      const renamedFile = new File([selectedFile], `school-id-${side}-${Date.now()}-${selectedFile.name}`, {
+        type: selectedFile.type,
+      });
+      await uploadStudentDocument(student.id, "school_id", renamedFile);
+
+      if (side === "front") {
+        setSchoolIdFrontFile(null);
+      } else {
+        setSchoolIdBackFile(null);
+      }
+
+      toast({ title: "School ID Uploaded", description: `Your school ID ${side} side is now on file.` });
     } catch (error) {
       toast({
         title: "Upload Failed",
@@ -220,6 +295,11 @@ const ProfileSettings = () => {
               <p className="text-muted-foreground">Loading profile...</p>
             ) : (
               <>
+                {/* School ID Value Display */}
+                <div className="rounded-md border border-border/60 p-4 mb-4 bg-muted/30">
+                  <span className="text-sm font-medium text-foreground">Your School ID:</span>
+                  <span className="ml-2 text-base font-mono text-primary">{student?.id || "N/A"}</span>
+                </div>
                 <div>
                   <label className="text-sm font-medium text-foreground mb-1 block">Profile Photo</label>
                   <Input type="file" accept="image/*" onChange={handleProfilePhotoUpload} />
@@ -253,23 +333,74 @@ const ProfileSettings = () => {
                 </div>
                 <div className="rounded-md border border-border/60 p-4 space-y-3">
                   <p className="text-sm font-medium text-foreground">School ID Document</p>
-                  <Input type="file" accept=".pdf,image/*" onChange={(e) => setSchoolIdFile(e.target.files?.[0] || null)} />
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-foreground">Front Side</label>
+                      <Input type="file" accept=".pdf,image/*" onChange={(e) => setSchoolIdFrontFile(e.target.files?.[0] || null)} />
+                      <Button type="button" variant="outline" onClick={() => handleSchoolIdUpload("front")} disabled={!schoolIdFrontFile}>
+                        Upload Front
+                      </Button>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-foreground">Back Side</label>
+                      <Input type="file" accept=".pdf,image/*" onChange={(e) => setSchoolIdBackFile(e.target.files?.[0] || null)} />
+                      <Button type="button" variant="outline" onClick={() => handleSchoolIdUpload("back")} disabled={!schoolIdBackFile}>
+                        Upload Back
+                      </Button>
+                    </div>
+                  </div>
                   <div className="flex flex-wrap gap-3">
-                    <Button type="button" variant="outline" onClick={handleSchoolIdUpload} disabled={!schoolIdFile}>
-                      Upload School ID
-                    </Button>
-                    {latestSchoolId ? (
+                    {(latestSchoolIdFront || latestSchoolIdBack || latestSchoolIdGeneric) ? (
                       <Button type="button" variant="ghost" onClick={() => setIsSchoolIdVisible((prev) => !prev)}>
                         {isSchoolIdVisible ? "Hide Uploaded ID" : "Show Uploaded ID"}
                       </Button>
                     ) : null}
                   </div>
-                  {latestSchoolId && isSchoolIdVisible ? (
-                    <a href={latestSchoolId.url} target="_blank" rel="noreferrer" className="text-sm text-primary underline-offset-4 hover:underline">
-                      {latestSchoolId.name}
-                    </a>
+                  {isSchoolIdVisible ? (
+                    <div className="space-y-2 text-sm">
+                      {latestSchoolIdFront ? (
+                        <a href={latestSchoolIdFront.url} target="_blank" rel="noreferrer" className="block text-primary underline-offset-4 hover:underline">
+                          View Front: {latestSchoolIdFront.name}
+                        </a>
+                      ) : null}
+                      {latestSchoolIdBack ? (
+                        <a href={latestSchoolIdBack.url} target="_blank" rel="noreferrer" className="block text-primary underline-offset-4 hover:underline">
+                          View Back: {latestSchoolIdBack.name}
+                        </a>
+                      ) : null}
+                      {!latestSchoolIdFront && !latestSchoolIdBack && latestSchoolIdGeneric ? (
+                        <a href={latestSchoolIdGeneric.url} target="_blank" rel="noreferrer" className="block text-primary underline-offset-4 hover:underline">
+                          {latestSchoolIdGeneric.name}
+                        </a>
+                      ) : null}
+                    </div>
                   ) : null}
                 </div>
+                {/* Fee Statement Upload Section */}
+                <div className="rounded-md border border-border/60 p-4 space-y-3">
+                  <p className="text-sm font-medium text-foreground">Fee Statement Document</p>
+                  <div className="space-y-2">
+                    <Input type="file" accept=".pdf,image/*" onChange={(e) => setFeeStatementFile(e.target.files?.[0] || null)} />
+                    <Button type="button" variant="outline" onClick={handleFeeStatementUpload} disabled={!feeStatementFile}>
+                      Upload Fee Statement
+                    </Button>
+                  </div>
+                  <div className="flex flex-wrap gap-3">
+                    {latestFeeStatement ? (
+                      <Button type="button" variant="ghost" onClick={() => setIsFeeStatementVisible((prev) => !prev)}>
+                        {isFeeStatementVisible ? "Hide Uploaded Fee Statement" : "Show Uploaded Fee Statement"}
+                      </Button>
+                    ) : null}
+                  </div>
+                  {isFeeStatementVisible && latestFeeStatement ? (
+                    <div className="space-y-2 text-sm">
+                      <a href={latestFeeStatement.url} target="_blank" rel="noreferrer" className="block text-primary underline-offset-4 hover:underline">
+                        View Fee Statement: {latestFeeStatement.name}
+                      </a>
+                    </div>
+                  ) : null}
+                </div>
+
                 <div className="flex gap-3">
                   <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleSave}>
                     Save Changes
