@@ -23,28 +23,6 @@ const ProfileSettings = () => {
   const latestSchoolIdGeneric = schoolIdDocuments.find(
     (doc) => !doc.name.toLowerCase().includes("front") && !doc.name.toLowerCase().includes("back")
   );
-
-  const [form, setForm] = useState({
-    photo: "",
-    bio: "",
-    course: "",
-    institution: "",
-    yearJoined: "",
-    currentYear: "",
-    totalYears: "",
-  });
-  const [photoChanged, setPhotoChanged] = useState(false);
-  const [schoolIdFrontFile, setSchoolIdFrontFile] = useState<File | null>(null);
-  const [schoolIdBackFile, setSchoolIdBackFile] = useState<File | null>(null);
-  const [isSchoolIdVisible, setIsSchoolIdVisible] = useState(false);
-  // Fee Statement state
-  const [feeStatementFile, setFeeStatementFile] = useState<File | null>(null);
-  const [isFeeStatementVisible, setIsFeeStatementVisible] = useState(false);
-
-  // Find latest uploaded fee statement document
-  const feeStatementDocuments = student?.documents
-    ?.filter((doc) => doc.type === "fee_statement")
-    .sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()) || [];
   const latestFeeStatement = feeStatementDocuments[0];
   const handleFeeStatementUpload = async () => {
     if (!student || !feeStatementFile) {
@@ -200,12 +178,8 @@ const ProfileSettings = () => {
     if (!student) {
       return;
     }
-
     const file = event.target.files?.[0];
-    if (!file) {
-      return;
-    }
-
+    if (!file) return;
     if (!file.type.startsWith("image/")) {
       toast({
         title: "Upload Failed",
@@ -215,7 +189,6 @@ const ProfileSettings = () => {
       event.target.value = "";
       return;
     }
-
     if (file.size > 10 * 1024 * 1024) {
       toast({
         title: "Upload Failed",
@@ -225,11 +198,11 @@ const ProfileSettings = () => {
       event.target.value = "";
       return;
     }
-
     try {
       const photo = await uploadProfilePhoto(student.id, file);
       setForm((prev) => ({ ...prev, photo }));
       setPhotoChanged(true);
+      await refreshData();
       toast({ title: "Photo Uploaded", description: "Your profile photo has been uploaded." });
     } catch (error) {
       toast({
@@ -239,45 +212,6 @@ const ProfileSettings = () => {
       });
     } finally {
       event.target.value = "";
-    }
-  };
-
-  const handleSchoolIdUpload = async (side: "front" | "back") => {
-    const selectedFile = side === "front" ? schoolIdFrontFile : schoolIdBackFile;
-
-    if (!student || !selectedFile) {
-      return;
-    }
-
-    if (!selectedFile.type.startsWith("image/") && selectedFile.type !== "application/pdf") {
-      toast({ title: "Upload Failed", description: "School ID must be a PDF or image file.", variant: "destructive" });
-      return;
-    }
-
-    if (selectedFile.size > 10 * 1024 * 1024) {
-      toast({ title: "Upload Failed", description: "School ID file must be smaller than 10MB.", variant: "destructive" });
-      return;
-    }
-
-    try {
-      const renamedFile = new File([selectedFile], `school-id-${side}-${Date.now()}-${selectedFile.name}`, {
-        type: selectedFile.type,
-      });
-      await uploadStudentDocument(student.id, "school_id", renamedFile);
-
-      if (side === "front") {
-        setSchoolIdFrontFile(null);
-      } else {
-        setSchoolIdBackFile(null);
-      }
-
-      toast({ title: "School ID Uploaded", description: `Your school ID ${side} side is now on file.` });
-    } catch (error) {
-      toast({
-        title: "Upload Failed",
-        description: error instanceof Error ? error.message : "Unable to upload school ID.",
-        variant: "destructive",
-      });
     }
   };
 
@@ -300,24 +234,7 @@ const ProfileSettings = () => {
                   <span className="text-sm font-medium text-foreground">Your School ID:</span>
                   <span className="ml-2 text-base font-mono text-primary">{student?.id || "N/A"}</span>
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-foreground mb-1 block">Profile Photo</label>
-                  <Input type="file" accept="image/*" onChange={handleProfilePhotoUpload} />
-                  {form.photo ? <p className="text-xs text-muted-foreground mt-2">Current photo path: {form.photo}</p> : null}
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-foreground mb-1 block">Bio</label>
-                  <Textarea value={form.bio} onChange={(e) => setForm((prev) => ({ ...prev, bio: e.target.value }))} placeholder="Tell sponsors a bit about yourself..." rows={4} />
-                </div>
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium text-foreground mb-1 block">Course</label>
-                    <Input value={form.course} onChange={(e) => setForm((prev) => ({ ...prev, course: e.target.value }))} />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-foreground mb-1 block">Institution</label>
-                    <Input value={form.institution} onChange={(e) => setForm((prev) => ({ ...prev, institution: e.target.value }))} />
-                  </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
                   <div>
                     <label className="text-sm font-medium text-foreground mb-1 block">Year Joined</label>
                     <Input type="number" value={form.yearJoined} onChange={(e) => setForm((prev) => ({ ...prev, yearJoined: e.target.value }))} />

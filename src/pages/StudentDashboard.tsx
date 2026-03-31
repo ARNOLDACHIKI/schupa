@@ -138,6 +138,28 @@ const StudentDashboard = () => {
 
       await uploadStudentDocument(student.id, "school_id", renamedFile);
 
+      // Immediately update student documents in students array for UI
+      if (students && setStudents) {
+        setStudents((prev) =>
+          prev.map((s) =>
+            s.id === student.id
+              ? {
+                  ...s,
+                  documents: [
+                    {
+                      type: "school_id",
+                      name: renamedFile.name,
+                      url: "", // Optionally set to a temp value or leave blank
+                      uploadedAt: new Date().toISOString(),
+                    },
+                    ...(s.documents || []),
+                  ],
+                }
+              : s
+          )
+        );
+      }
+
       if (side === "front") {
         setSchoolIdFrontFile(null);
       } else {
