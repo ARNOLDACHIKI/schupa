@@ -31,7 +31,7 @@ const ProfileSettings = () => {
     const [isFeeStatementVisible, setIsFeeStatementVisible] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, students, isDataLoading, updateStudentProfile, uploadStudentDocument, uploadProfilePhoto, isAuthInitialized } = useAuth();
+  const { user, students, setStudents, isDataLoading, updateStudentProfile, uploadStudentDocument, uploadProfilePhoto, isAuthInitialized } = useAuth();
   const student = students.find((entry) => entry.email === user?.email) || students[0];
   const schoolIdDocuments = student?.documents
     ?.filter((doc) => doc.type === "school_id")
