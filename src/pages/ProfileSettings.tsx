@@ -10,6 +10,22 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 
 const ProfileSettings = () => {
+    // --- State Hooks ---
+    const [form, setForm] = useState({
+      photo: "",
+      bio: "",
+      course: "",
+      institution: "",
+      yearJoined: "",
+      currentYear: "",
+      totalYears: "",
+    });
+    const [photoChanged, setPhotoChanged] = useState(false);
+    const [schoolIdFrontFile, setSchoolIdFrontFile] = useState<File | null>(null);
+    const [schoolIdBackFile, setSchoolIdBackFile] = useState<File | null>(null);
+    const [feeStatementFile, setFeeStatementFile] = useState<File | null>(null);
+    const [isSchoolIdVisible, setIsSchoolIdVisible] = useState(false);
+    const [isFeeStatementVisible, setIsFeeStatementVisible] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, students, isDataLoading, updateStudentProfile, uploadStudentDocument, uploadProfilePhoto, isAuthInitialized } = useAuth();
